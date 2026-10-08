@@ -1,4 +1,26 @@
-# 인터넷에 올려서 아이폰만으로 쓰기 (방법 B)
+# 배포 방법 (인터넷에 올려서 아이폰만으로 쓰기)
+
+## 현재 배포 상태와 방식 (요약)
+- **방식**: GitHub Pages + GitHub Actions 자동 배포. 서버 코드가 없는 정적 파일이라 무료입니다.
+- **주소**: 목록 `https://7fsikminq.github.io/Game/` · 야구 `/baseball/` · 축구 `/soccer/` (계정명 소문자, `Game` 대문자 G)
+- **자동 흐름**: 코드를 `claude/serene-franklin-tpdu4g` 브랜치(이 저장소의 기본 브랜치)에 푸시 → Actions가 `npm test`(215개) 실행 → 통과하면 `tools/build-site.mjs`로 `_site`를 만들어 Pages에 배포(보통 1~3분). 테스트가 하나라도 실패하면 **배포되지 않습니다**(이전 버전이 그대로 유지).
+- **설정은 이미 끝남**: Settings → Pages → Source = GitHub Actions. 최신 실행(근사 명단 포함)이 성공했습니다.
+
+### 새 버전을 올리는 순서
+1. 파일을 고치고 `npm test` 로 로컬 확인.
+2. 커밋 → `git push origin claude/serene-franklin-tpdu4g`.
+3. 저장소 **Actions** 탭 → `Deploy to GitHub Pages` 맨 위 실행이 **초록 ✅** 가 될 때까지 대기(`test` → `deploy` 두 단계).
+4. 아이폰에서 앱을 완전히 종료했다가 다시 열기(온라인) → 새 버전 반영.
+
+### 실패했을 때 / 되돌리기
+- ❌ `test` 단계 실패: 실행을 눌러 로그의 `✖` 줄 확인 → 고쳐서 다시 푸시.
+- ❌ `deploy` 단계에서 `Get Pages site failed`: Settings → Pages 에서 Source 를 GitHub Actions 로 → **Re-run all jobs**.
+- 이전 버전으로 되돌리기: Actions 에서 예전 성공 실행을 열어 **Re-run all jobs**(그 시점의 코드로 다시 배포). 또는 문제 커밋을 `git revert` 해서 푸시.
+- 수동 실행: Actions → `Deploy to GitHub Pages` → **Run workflow** → 브랜치 선택.
+
+---
+
+(아래는 같은 정적 파일을 다른 곳에 올리는 방법과 상세 설명입니다.)
 
 [IPHONE-SETUP.md](IPHONE-SETUP.md)의 방법 A는 노트북 서버가 켜져 있어야 합니다.
 이 문서는 정적 파일을 **HTTPS 주소**에 올려서, 노트북 없이 아이폰만으로 쓰고 **오프라인에서도 열리게** 만드는 방법입니다.
@@ -60,7 +82,7 @@ Create → Pages → Connect to Git → 저장소 선택 → Framework preset `N
 
 ## 아이폰에서 설치
 
-배포 주소를 **Safari로** 열고 [IPHONE-SETUP.md 3-3절](IPHONE-SETUP.md)과 같이 **공유 → 홈 화면에 추가 → 웹 앱으로 열기 → 추가**.
+배포 주소를 **Safari로** 열고 [IPHONE-SETUP.md B-2](IPHONE-SETUP.md)와 같이 **공유 → 홈 화면에 추가 → 웹 앱으로 열기 → 추가**.
 
 그다음 **한 번 온라인에서 앱을 열어둡니다.** 이때 서비스 워커가 파일을 저장하고, 이후에는 비행기 모드에서도 열립니다.
 
@@ -68,7 +90,7 @@ Create → Pages → Connect to Git → 저장소 선택 → Framework preset `N
 
 - 코드를 고쳐서 푸시(또는 `_site` 재업로드)하면 새 버전이 올라갑니다.
 - 서비스 워커는 **네트워크 우선**입니다. 온라인이면 앱을 열 때마다 최신 파일을 받고, 오프라인일 때만 저장된 파일을 씁니다. 그래서 보통 앱을 **완전히 닫았다가 다시 열면** 새 버전이 반영됩니다.
-- 파일을 새로 추가했거나 구조를 바꿨다면 `baseball/sw.js` 의 `CACHE` 이름 숫자를 올리고(`baseball-v1` → `baseball-v2`), `FILES` 목록에 새 파일을 추가하세요. 오프라인 캐시가 새 목록으로 교체됩니다.
+- 파일을 새로 추가했거나 구조를 바꿨다면(예: `baseball/src/roster-data.js`) 해당 게임의 `sw.js` 의 `CACHE` 이름 숫자를 올리고(현재 야구는 `baseball-v2`, 축구는 `soccer-v1`), `FILES` 목록에 새 파일을 추가하세요. 오프라인 캐시가 새 목록으로 교체됩니다.
 - 아이콘이나 이름을 바꿨다면 iOS는 홈 화면 아이콘을 갱신하지 않습니다. 앱을 삭제하고 다시 추가해야 합니다(**백업 먼저**).
 
 ## 데이터는 안전한가
