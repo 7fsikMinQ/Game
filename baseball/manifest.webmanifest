@@ -1,7 +1,7 @@
 {
   "name": "야구단",
   "short_name": "야구단",
-  "description": "앱을 닫아도 시즌이 흘러가는 방치형 야구단 운영 게임",
+  "description": "MLB·KBO 구단을 맡아 키우는 방치형 야구 운영 게임",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",

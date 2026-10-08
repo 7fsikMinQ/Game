@@ -9,7 +9,7 @@
     "test": "node tools/test.mjs",
     "icons": "node tools/make-icons.mjs",
     "site": "node tools/build-site.mjs",
-    "smoke": "node tools/smoke.mjs",
+    "smoke": "node tools/smoke-baseball.mjs",
     "smoke:soccer": "node tools/smoke-soccer.mjs",
     "pack": "node tools/make-pack.mjs"
   },

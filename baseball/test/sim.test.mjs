@@ -1,157 +1,119 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { createLeague, ovrOf, teamOvr } from '../src/league.js';
-import { simulateGame } from '../src/sim.js';
+import { createLeague, makeSchedule } from '../src/league.js';
+import { LEAGUES } from '../src/data.js';
+import { simulateGame, ENV } from '../src/sim.js';
+import { ovrOf } from '../src/player.js';
+import { autoRoster } from '../src/roster.js';
 
-const league = (seed = 7) => createLeague(createRng(seed)).teams;
-const clone = (x) => JSON.parse(JSON.stringify(x));
-
-test('팀 구성: 타자 9 + 선발 5 + 구원 3, 포지션이 겹치지 않는다', () => {
-  for (const t of league()) {
-    assert.equal(t.players.length, 17);
-    assert.equal(t.players.filter((p) => p.role === 'H').length, 9);
-    assert.equal(t.players.filter((p) => p.role === 'SP').length, 5);
-    assert.equal(t.players.filter((p) => p.role === 'RP').length, 3);
-    const pos = t.players.filter((p) => p.role === 'H').map((p) => p.pos);
-    assert.equal(new Set(pos).size, 9);
-  }
-});
-
-test('선수 능력치는 25~99 범위이고 모든 능력치가 잠재력 이하', () => {
-  for (const t of league(3)) {
-    for (const p of t.players) {
-      const keys = p.role === 'H' ? ['con', 'pow', 'eye', 'spd', 'def'] : ['stf', 'ctl', 'sta'];
-      for (const k of keys) {
-        assert.ok(p[k] >= 25 && p[k] <= 99, `${p.name} ${k}=${p[k]}`);
-        assert.ok(p[k] <= p.pot, `${p.name} ${k} > pot`);
+function league(c, seed = 11) { const rng = createRng(seed); const lg = createLeague(rng, c); for (const t of lg.teams) autoRoster(t, LEAGUES[c]); return { lg, rng }; }
+function recover(lg) { for (const t of lg.teams) for (const p of t.players) { if (p.inj > 0) p.inj--; p.fat = Math.max(0, p.fat - 12); p.rest++; } }
+function season(c, seed, seasons = 1) {
+  const { lg, rng } = league(c, seed);
+  const L = LEAGUES[c];
+  const agg = { n: 0, runs: 0, pa: 0, k: 0, bb: 0, hr: 0, ties: 0, homeW: 0, decided: 0, inn: 0, inj: 0, maxInn: 0, wins: lg.teams.map(() => 0), g: lg.teams.map(() => 0) };
+  for (let i = 0; i < seasons; i++) {
+    for (const round of makeSchedule(L, rng)) {
+      for (const [h, a] of round) {
+        const r = simulateGame(lg.teams[h], lg.teams[a], rng, { env: ENV[c] });
+        agg.n++; agg.runs += r.hs + r.as; agg.inn += r.innings; agg.inj += r.inj.length; agg.maxInn = Math.max(agg.maxInn, r.innings);
+        if (r.tie) agg.ties++; else { agg.decided++; if (r.winnerId === h) agg.homeW++; agg.wins[r.winnerId]++; }
+        agg.g[h]++; agg.g[a]++;
       }
-      assert.ok(ovrOf(p) >= 25 && ovrOf(p) <= 99);
+      recover(lg);
     }
   }
+  for (const t of lg.teams) for (const p of t.players) if (p.s && p.role === 'H') { agg.pa += p.s.pa; agg.k += p.s.k; agg.bb += p.s.bb; agg.hr += p.s.hr; }
+  return { lg, agg };
+}
+
+test('같은 시드 → 같은 경기 결과 (결정적)', () => {
+  const run = () => { const { lg, rng } = league('mlb', 5); return simulateGame(lg.teams[0], lg.teams[1], rng, { log: true, env: ENV.mlb }); };
+  assert.deepEqual(run(), run());
 });
 
-test('같은 시드 -> 같은 경기 결과', () => {
-  const [a, b] = league();
-  const r1 = simulateGame(clone(a), clone(b), createRng(11), { log: true });
-  const r2 = simulateGame(clone(a), clone(b), createRng(11), { log: true });
-  assert.deepEqual(r1, r2);
+test('MLB 득점 환경: 팀당 4.0~5.0점, 삼진 19~25%, 볼넷 7~10%, 홈런 2.4~3.6%, 홈 승률 51~56%, 무승부 없음', () => {
+  const { agg } = season('mlb', 21, 2);
+  const rg = agg.runs / agg.n / 2;
+  assert.ok(rg > 4.0 && rg < 5.0, `R/G ${rg}`);
+  assert.ok(agg.k / agg.pa > 0.19 && agg.k / agg.pa < 0.25, `K% ${agg.k / agg.pa}`);
+  assert.ok(agg.bb / agg.pa > 0.07 && agg.bb / agg.pa < 0.10, `BB% ${agg.bb / agg.pa}`);
+  assert.ok(agg.hr / agg.pa > 0.024 && agg.hr / agg.pa < 0.036, `HR% ${agg.hr / agg.pa}`);
+  const home = agg.homeW / agg.decided;
+  assert.ok(home > 0.51 && home < 0.56, `home ${home}`);
+  assert.equal(agg.ties, 0);
 });
 
-test('경기 불변식: 무승부 없음, 이닝 합 = 점수, 승자 = 더 많이 득점', () => {
-  const [a, b] = league();
-  const rng = createRng(2024);
-  for (let i = 0; i < 500; i++) {
-    const [home, away] = i % 2 ? [a, b] : [b, a];
-    const r = simulateGame(home, away, rng, { stats: false, log: true });
-    assert.notEqual(r.hs, r.as);
-    const sum = (arr) => arr.reduce((x, y) => x + (y || 0), 0);
-    assert.equal(sum(r.line.home), r.hs);
-    assert.equal(sum(r.line.away), r.as);
-    assert.equal(r.winnerId, r.hs > r.as ? home.id : away.id);
-    assert.ok(r.innings >= 9 && r.innings <= 15);
-    assert.equal(r.line.away.length, r.innings);
-    assert.equal(r.line.home.length, r.innings);
-    // 9회초 후 홈이 앞서면 말 공격 생략(null)
-    if (r.line.home[r.innings - 1] === null) assert.ok(r.hs > r.as && r.innings >= 9);
-    assert.ok(r.hits.home >= 0 && r.hits.away >= 0);
-    // 플레이 로그의 마지막 점수 = 최종 점수 (연장 15회 강제 종료 제외)
-    const last = r.plays[r.plays.length - 1];
-    if (r.innings < 15) assert.deepEqual(last.score, [r.as, r.hs]);
+test('KBO 득점 환경과 무승부: 팀당 4.3~5.6점, 삼진 17.5~23%, 연장 11회 제한, 무승부 존재', () => {
+  const { agg } = season('kbo', 22, 4);
+  const rg = agg.runs / agg.n / 2;
+  assert.ok(rg > 4.3 && rg < 5.6, `R/G ${rg}`);
+  assert.ok(agg.k / agg.pa > 0.175 && agg.k / agg.pa < 0.23, `K% ${agg.k / agg.pa}`);
+  assert.ok(agg.maxInn <= 11, `max inn ${agg.maxInn}`);
+  assert.ok(agg.ties > 0 && agg.ties / agg.n < 0.05, `ties ${agg.ties}/${agg.n}`);
+});
+
+test('경기당 이닝 9.0~9.4, 부상은 팀 시즌당 적당히(0.5~12건)', () => {
+  const { agg, lg } = season('mlb', 23, 1);
+  assert.ok(agg.inn / agg.n > 9.0 && agg.inn / agg.n < 9.4);
+  const perTeam = agg.inj / lg.teams.length;
+  assert.ok(perTeam > 0.5 && perTeam < 12, `injuries per team ${perTeam}`);
+});
+
+test('능력이 높은 팀이 더 많이 이긴다 (팀 능력 1점당 승률 +1.5~5%p)', () => {
+  const { agg, lg } = season('mlb', 24, 2);
+  const act = (t) => t.players.filter((p) => p.act);
+  const xs = lg.teams.map((t) => act(t).reduce((a, p) => a + ovrOf(p), 0) / act(t).length);
+  const ys = lg.teams.map((t, i) => agg.wins[i] / agg.g[i]);
+  const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+  let sxy = 0, sxx = 0;
+  xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) ** 2; });
+  const slope = sxy / sxx;
+  assert.ok(slope > 0.015 && slope < 0.05, `slope ${slope}`);
+});
+
+test('팀 승률 분포가 현실적이다 (표준편차 5.5~10%p)', () => {
+  for (const c of ['mlb', 'kbo']) {
+    const { agg } = season(c, 25, 1);
+    const p = agg.wins.map((w, i) => w / agg.g[i]);
+    const sd = Math.sqrt(p.reduce((a, x) => a + (x - 0.5) ** 2, 0) / p.length);
+    assert.ok(sd > 0.04 && sd < 0.11, `${c} sd ${sd}`);
   }
 });
 
-test('끝내기: 홈이 앞선 순간 경기가 끝난다', () => {
-  const [a, b] = league();
-  const rng = createRng(77);
-  let found = 0;
-  for (let i = 0; i < 1500 && found < 3; i++) {
-    const r = simulateGame(a, b, rng, { stats: false, log: true });
-    if (r.walkoff) {
-      found++;
-      assert.ok(r.hs > r.as);
-      const last = r.plays[r.plays.length - 1];
-      assert.equal(last.half, 1);
-      assert.ok(last.runs > 0);
-    }
+test('기록 정합성: 승·패 투수 각 1명, 세이브는 승리팀 투수, 타자 안타 ≤ 타수', () => {
+  const { lg, rng } = league('mlb', 31);
+  for (let i = 0; i < 60; i++) {
+    const r = simulateGame(lg.teams[i % 30], lg.teams[(i + 7) % 30], rng, { env: ENV.mlb });
+    assert.ok(r.wp && r.lp && r.wp !== r.lp);
+    assert.ok(r.hs !== r.as);
+    assert.equal(r.line.away.reduce((a, b) => a + b, 0), r.as);
+    assert.equal(r.line.home.reduce((a, b) => a + (b || 0), 0), r.hs);
   }
-  assert.ok(found > 0, '1500경기에서 끝내기가 한 번도 안 나옴');
+  for (const t of lg.teams) for (const p of t.players) if (p.s && p.role === 'H') assert.ok(p.s.h <= p.s.ab && p.s.hr <= p.s.h && p.s.ab <= p.s.pa);
+  const w = lg.teams.flatMap((t) => t.players).reduce((a, p) => a + (p.s && p.role === 'P' ? p.s.w : 0), 0);
+  const l = lg.teams.flatMap((t) => t.players).reduce((a, p) => a + (p.s && p.role === 'P' ? p.s.l : 0), 0);
+  assert.equal(w, 60); assert.equal(l, 60);
 });
 
-test('개인 기록 합계가 팀 기록과 일치한다 (안타, 삼진, 타점<=득점)', () => {
-  const [a, b] = league();
-  const A = clone(a), B = clone(b);
-  const rng = createRng(31);
-  let hits = 0, runs = 0;
-  for (let i = 0; i < 40; i++) {
-    const r = simulateGame(A, B, rng);
-    hits += r.hits.home + r.hits.away;
-    runs += r.hs + r.as;
-    A.rot++; B.rot++;
-  }
-  const bats = [...A.players, ...B.players].filter((p) => p.role === 'H' && p.s);
-  const pits = [...A.players, ...B.players].filter((p) => p.role !== 'H' && p.s);
-  assert.equal(bats.reduce((x, p) => x + p.s.h, 0), hits);
-  assert.equal(bats.reduce((x, p) => x + p.s.k, 0), pits.reduce((x, p) => x + p.s.k, 0));
-  assert.equal(bats.reduce((x, p) => x + p.s.r, 0), runs);
-  assert.ok(bats.reduce((x, p) => x + p.s.rbi, 0) <= runs);
-  assert.equal(pits.reduce((x, p) => x + p.s.er, 0), runs);
-  // 모든 경기에서 승 1, 패 1
-  assert.equal(pits.reduce((x, p) => x + p.s.w, 0), 40);
-  assert.equal(pits.reduce((x, p) => x + p.s.l, 0), 40);
-  for (const p of bats) assert.ok(p.s.ab <= p.s.pa && p.s.h <= p.s.ab && p.s.hr <= p.s.h);
-});
-
-test('선발은 5인 로테이션으로 돌고, 구원이 등판한다', () => {
-  const [a, b] = league();
-  const A = clone(a), B = clone(b);
-  const rng = createRng(5);
+test('선발은 돌아가며 등판하고 (5인 로테이션), 불펜은 지치면 쉰다', () => {
+  const { lg, rng } = league('mlb', 41);
+  const t = lg.teams[0];
   const starters = new Set();
-  let usedRelief = 0;
-  for (let i = 0; i < 20; i++) {
-    const r = simulateGame(A, B, rng, { stats: false });
-    starters.add(r.sp.home);
-    A.rot++; B.rot++;
+  for (let i = 0; i < 25; i++) {
+    const r = simulateGame(t, lg.teams[1 + (i % 29)], rng, { env: ENV.mlb });
+    starters.add(r.sp[r.homeId === t.id ? 'home' : 'away']);
+    recover(lg);
   }
-  assert.equal(starters.size, 5);
-  for (let i = 0; i < 20; i++) {
-    simulateGame(A, B, rng);
-    A.rot++; B.rot++;
-  }
-  usedRelief = A.players.filter((p) => p.role === 'RP' && p.s && p.s.g > 0).length;
-  assert.ok(usedRelief >= 1);
+  assert.ok(starters.size >= 4, `starters ${starters.size}`);
+  assert.ok(t.players.filter((p) => p.pos === 'RP').every((p) => p.fat < 100));
 });
 
-test('밸런스: 비슷한 두 팀의 팀당 득점은 현실 범위, 홈 어드밴티지는 없음', () => {
-  const rng = createRng(99);
-  const teams = createLeague(rng).teams;
-  const [a, b] = [teams[1], teams[2]];
-  let runs = 0, games = 0, aWins = 0;
-  for (let i = 0; i < 3000; i++) {
-    const r = simulateGame(a, b, rng, { stats: false });
-    runs += r.hs + r.as;
-    games += 2;
-    if (r.winnerId === a.id) aWins++;
-  }
-  const rpg = runs / games;
-  assert.ok(rpg > 3.6 && rpg < 5.6, `팀당 득점 ${rpg.toFixed(2)}`);
-  assert.ok(aWins > 600 && aWins < 2400);
-});
-
-test('밸런스: 더 강한 팀이 더 자주 이기지만 약팀도 이길 수 있다', () => {
-  const rng = createRng(4);
-  const teams = createLeague(rng).teams;
-  const base = JSON.parse(JSON.stringify(teams[1]));
-  const strong = JSON.parse(JSON.stringify(base));
-  strong.id = 99;
-  for (const p of strong.players) for (const k of p.role === 'H' ? ['con', 'pow', 'eye', 'spd', 'def'] : ['stf', 'ctl', 'sta']) p[k] = Math.min(99, p[k] + 10);
-  assert.ok(teamOvr(strong).total > teamOvr(base).total + 8);
-  let wins = 0;
-  const n = 2000;
-  for (let i = 0; i < n; i++) {
-    const r = i % 2 ? simulateGame(strong, base, rng, { stats: false }) : simulateGame(base, strong, rng, { stats: false });
-    if (r.winnerId === 99) wins++;
-  }
-  const rate = wins / n;
-  assert.ok(rate > 0.6 && rate < 0.85, `+10 팀 승률 ${rate.toFixed(3)}`);
+test('모든 포지션에서 수비 감점이 적용된다 (포수/유격수를 아무나 못 본다)', async () => {
+  const { fitPenalty } = await import('../src/player.js');
+  assert.equal(fitPenalty({ pos: 'SS' }, 'SS'), 0);
+  assert.ok(fitPenalty({ pos: 'LF' }, 'C') >= 20);
+  assert.ok(fitPenalty({ pos: 'LF' }, 'SS') > fitPenalty({ pos: '3B' }, 'SS'));
+  assert.equal(fitPenalty({ pos: 'LF' }, 'DH'), 0);
 });

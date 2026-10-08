@@ -1,26 +1,31 @@
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const avg = (arr) => (arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : 0);
+export const r2 = (v) => Math.round(v * 100) / 100;
 
-// 자금 단위는 "만". 10,000만 = 1억.
-export function fmtMoney(m) {
+// 자금 단위: MLB는 백만 달러($M), KBO는 억 원. 리그마다 다르게 보여준다.
+export function fmtMoney(country, m) {
   const sign = m < 0 ? '-' : '';
-  const v = Math.abs(Math.round(m));
-  if (v >= 10000) {
-    const eok = v / 10000;
-    return sign + (eok >= 100 ? Math.round(eok) : eok.toFixed(2).replace(/\.?0+$/, '')) + '억';
+  const v = Math.abs(m);
+  if (country === 'mlb') {
+    if (v >= 1000) return `${sign}$${(v / 1000).toFixed(2)}B`;
+    return `${sign}$${v >= 100 ? Math.round(v) : v >= 10 ? v.toFixed(1) : v.toFixed(2)}M`;
   }
-  return sign + v.toLocaleString('ko-KR') + '만';
+  if (v < 1) return `${sign}${Math.round(v * 10000).toLocaleString('ko-KR')}만`;
+  return `${sign}${v >= 100 ? Math.round(v).toLocaleString('ko-KR') : v >= 10 ? v.toFixed(1) : v.toFixed(2)}억`;
 }
-
 export const fmtAvg = (h, ab) => (ab ? (h / ab).toFixed(3).replace(/^0/, '') : '.000');
 export const fmtPct = (w, l) => (w + l ? (w / (w + l)).toFixed(3).replace(/^0/, '') : '.000');
 export const fmtIP = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;
 export const fmtEra = (er, outs) => (outs ? ((er * 27) / outs).toFixed(2) : '-.--');
 export const fmtClock = (ms) => {
   const s = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(s / 60);
-  return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${String(m).padStart(2, '0')}:${ss}`;
 };
-
 export const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+// id 기반의 고정된 -1..1 값. 스카우팅 오차가 새로고침마다 흔들리지 않게 한다.
+export const fuzz = (id, salt = 0) => (((Math.imul(id + salt * 7919, 2654435761) >>> 0) % 2001) / 1000) - 1;
+export const f1 = (n) => (Math.round(n * 10) / 10).toFixed(1);

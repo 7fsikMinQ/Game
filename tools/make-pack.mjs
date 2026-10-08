@@ -1,13 +1,28 @@
-// CSV(또는 JSON)를 검사하고 게임이 읽는 데이터 팩(JSON)으로 바꾼다.
+// CSV(또는 JSON)를 검사하고 게임이 읽는 데이터 팩(JSON)으로 바꾼다. 축구/야구 모두 지원(헤더로 자동 판별).
 //   node tools/make-pack.mjs 내데이터.csv [결과.json]
+//   node tools/make-pack.mjs --teams mlb|kbo        야구: 구단 이름이 미리 들어간 빈 양식을 출력
 // 가져오기 화면에는 CSV를 그대로 붙여넣어도 되지만, 미리 검사하면 오류를 먼저 볼 수 있다.
 import fs from 'node:fs';
-import { parsePackText } from '../soccer/src/pack.js';
+import { parsePackText as parseSoccer } from '../soccer/src/pack.js';
+import { parsePackText as parseBaseball } from '../baseball/src/pack.js';
+import { LEAGUES } from '../baseball/src/data.js';
 
-const [inp, out] = process.argv.slice(2);
+const args = process.argv.slice(2);
+if (args[0] === '--teams') {
+  const L = LEAGUES[args[1]];
+  if (!L) { console.error('사용법: node tools/make-pack.mjs --teams mlb|kbo'); process.exit(1); }
+  console.log('league,team,name,pos,birth,ovr,pot,hype,salary,years,fx');
+  for (const t of L.teams) console.log(`${L.id},${t.name},,,,,,,,,`);
+  process.exit(0);
+}
+const [inp, out] = args;
 if (!inp) { console.error('사용법: node tools/make-pack.mjs 입력.csv [출력.json]'); process.exit(1); }
-const r = parsePackText(fs.readFileSync(inp, 'utf8'));
-console.log(r.ok ? `OK  구단 ${r.stats.clubs}개 · 선수 ${r.stats.players}명 · 리그 ${r.pack.country}` : '실패');
+const text = fs.readFileSync(inp, 'utf8');
+const head = (text.trim().startsWith('{') ? text.slice(0, 400) : text.split(/\r?\n/, 1)[0]).toLowerCase();
+const baseball = head.includes('baseball-pack') || (head.includes('team') && !head.includes('club'));
+const r = (baseball ? parseBaseball : parseSoccer)(text);
+const n = baseball ? r.stats.teams : r.stats.clubs;
+console.log(r.ok ? `OK  [${baseball ? '야구' : '축구'}] 구단 ${n}개 · 선수 ${r.stats.players}명 · 리그 ${r.pack.country}` : '실패');
 for (const e of r.errors) console.log('  오류 :', e);
 if (r.stats.moreErrors) console.log(`  … 오류 ${r.stats.moreErrors}건 더 있음`);
 for (const w of r.warnings) console.log('  참고 :', w);

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>야구단</title>
-<meta name="description" content="앱을 닫아도 시즌이 흘러가는 방치형 야구단 운영 게임">
+<meta name="description" content="MLB·KBO 구단을 맡아 키우는, 앱을 닫아도 시즌이 흘러가는 방치형 야구 운영 게임">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121612" media="(prefers-color-scheme: dark)">
@@ -27,6 +27,7 @@
   <div class="backdrop" data-act="close"></div>
   <div class="sheet" id="sheetbody" role="dialog" aria-modal="true"></div>
 </div>
+<div id="busy" class="busy" hidden><div><b>경기를 계산하는 중…</b><small>자리를 비운 동안의 경기를 반영하고 있습니다</small></div></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <noscript>이 게임은 JavaScript가 필요합니다.</noscript>
 <script type="module" src="src/app.js"></script>
