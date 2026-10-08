@@ -21,7 +21,7 @@
 git clone https://github.com/7fsikMinQ/Game.git
 cd Game
 git checkout claude/serene-franklin-tpdu4g
-npm test        # 자동 테스트 212개 (약 45초). 윈도우는 test.bat
+npm test        # 자동 테스트 215개 (약 45초). 윈도우는 test.bat
 npm start       # 개발 서버. 윈도우는 start.bat
 ```
 

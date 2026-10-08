@@ -9,6 +9,14 @@ function bench(rng, pos) {
   const p = ['2B', '3B', 'SS', 'LF', 'CF', 'RF', '1B'];
   return pos ?? rng.pick(p);
 }
+// 시작 연봉 총액을 구단 예산에 맞춘다(시장 계약 선수만 조정)
+export function fitPayroll(L, def, players) {
+  const budget = L.rev0 * def.mkt * 1.0 * L.budgetShare;
+  const target = budget * (0.88 + def.str * 0.05);
+  const pay = players.reduce((a, p) => a + p.sal, 0);
+  const f = clamp(target / pay, 0.55, 1.7);
+  for (const p of players) if (p.svc >= L.arbAt && p.fx !== 2) p.sal = Math.max(L.minSal, Math.round(p.sal * f * 100) / 100);
+}
 function genTeam(ctx, id, def) {
   const { rng, L } = ctx;
   const mean = 52 + def.str * (L.id === 'kbo' ? 3 : 4) + rng.normal(0, 0.8);
@@ -45,12 +53,7 @@ function genTeam(ctx, id, def) {
     swap('RF', 1, 'en', 5);
     swap('RP', 2, 'jp', 2);
   }
-  // 시작 연봉 총액을 구단 예산에 맞춘다(시장 계약 선수만 조정)
-  const budget = L.rev0 * def.mkt * 1.0 * L.budgetShare;
-  const target = budget * (0.88 + def.str * 0.05);
-  const pay = players.reduce((a, p) => a + p.sal, 0);
-  const f = clamp(target / pay, 0.55, 1.7);
-  for (const p of players) if (p.svc >= L.arbAt && p.fx !== 2) p.sal = Math.max(L.minSal, Math.round(p.sal * f * 100) / 100);
+  fitPayroll(L, def, players);
   return { id, name: def.name, short: def.short, color: def.color, div: def.div, mkt: def.mkt, players, w: 0, l: 0, rs: 0, ra: 0, fan: 50, auto: true, lineup: null, manual: false, fac: null };
 }
 

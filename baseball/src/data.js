@@ -1,5 +1,5 @@
-// 구단명은 실제 공개 정보(2026 시즌 기준 소속 리그/지구). 선수는 전부 가상이다.
-// 실제 선수 데이터는 사용자가 직접 데이터 팩으로 가져온다(docs/baseball/REAL-DATA.md).
+// 구단명은 실제 공개 정보(2026 시즌 기준 소속 리그/지구). 선수는 가상 선수 + 근사한 실제 선수(이름 변형, roster-data.js).
+// 정확한 실제 데이터는 사용자가 직접 데이터 팩으로 가져온다(docs/baseball/REAL-DATA.md).
 export const POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 export const PITCH_POS = ['SP', 'RP'];
 export const POS_LABEL = { C: '포수', '1B': '1루수', '2B': '2루수', '3B': '3루수', SS: '유격수', LF: '좌익수', CF: '중견수', RF: '우익수', DH: '지명타자', SP: '선발', RP: '구원' };
@@ -33,7 +33,7 @@ export const LEAGUES = {
     ],
   },
   kbo: {
-    id: 'kbo', name: 'KBO', long: 'KBO 리그', games: 144, active: 29, farmMax: 21, nH: 14, nSP: 5, minSal: 0.3,
+    id: 'kbo', name: 'KBO', long: 'KBO', games: 144, active: 29, farmMax: 21, nH: 14, nSP: 5, minSal: 0.3,
     wage: { base: 2.8, k: 0.085, max: 40 }, rev0: 700, budgetShare: 0.22, faAt: 8, arbAt: 3, tradeDeadline: 0.7,
     cap: 143.97, capFloor: 60.65, capRates: [0.3, 0.5, 1.0], startCash: 0.08, draftRounds: 11, draftN: 110, foreign: true,
     divs: ['KBO'], leagues: ['KBO'],

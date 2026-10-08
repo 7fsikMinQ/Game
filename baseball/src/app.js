@@ -13,7 +13,7 @@ function safeStorage() {
 const store = createStore(safeStorage());
 const seed = () => (Date.now() ^ 0x9e3779b9) >>> 0;
 let s = store.load();
-const ui = { tab: 'home', rseg: 'H', lseg: 'table', cseg: 'fin', msub: 'trade', frole: 'ALL', sheet: null, live: null, report: null, setup: s ? null : 'league', autopilot: true, trade: null, packText: '', packResult: null, backupAge: '' };
+const ui = { tab: 'home', rseg: 'H', lseg: 'table', cseg: 'fin', msub: 'trade', frole: 'ALL', sheet: null, live: null, report: null, setup: s ? null : 'league', autopilot: true, trade: null, packText: '', packResult: null, backupAge: '', realRoster: true };
 const persist = () => { if (s && s.phase !== 'setup') store.save(s); };
 
 // ───────── 렌더 ─────────
@@ -25,7 +25,7 @@ function backupAgeText() {
 function render() {
   const view = $('#view');
   if (!s || s.phase === 'setup') {
-    view.innerHTML = ui.setup === 'club' && s ? clubSelectView(s, ui) : leagueSelectView();
+    view.innerHTML = ui.setup === 'club' && s ? clubSelectView(s, ui) : leagueSelectView(ui);
     $('#nav').innerHTML = ''; $('#nav').hidden = true; $('#season').textContent = '';
     return;
   }
@@ -130,7 +130,8 @@ function act(name, d) {
   const now = Date.now();
   switch (name) {
     // 시작
-    case 'pick-league': s = G.newGame(seed(), now, d.id); ui.setup = 'club'; render(); break;
+    case 'pick-league': s = G.newGame(seed(), now, d.id, { real: ui.realRoster }); ui.setup = 'club'; render(); break;
+    case 'toggle-real': ui.realRoster = !ui.realRoster; render(); break;
     case 'import-open': ui.sheet = { type: 'import' }; openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break;
     case 'import-mask': ui.packMask = !ui.packMask; ui.packText = $('#pk-in').value; openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break;
     case 'import-check': { ui.packText = $('#pk-in').value; ui.packResult = parsePackText(ui.packText); openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break; }

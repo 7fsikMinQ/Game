@@ -1,8 +1,9 @@
 // 데이터 팩: 사용자가 직접 가져오는 선수 데이터(CSV 또는 JSON). 앱에는 실제 선수 데이터가 들어 있지 않다.
 // 이유와 구하는 방법은 docs/baseball/REAL-DATA.md. 가져온 데이터는 이 기기 안에만 저장된다.
 import { LEAGUES } from './data.js';
-import { genPlayer, ovrOf, marketWage } from './player.js';
+import { genPlayer, ovrOf, marketWage, genName } from './player.js';
 import { clamp } from './util.js';
+import { ROSTER_DATA } from './roster-data.js';
 
 export const PACK_FORMAT = 'baseball-pack';
 export const MAX_PACK_BYTES = 6 * 1024 * 1024;
@@ -107,6 +108,19 @@ mlb,Yankees,샘플 신예,SS,2007-02-20,50,78,3,0.8,3,,,,
 kbo,LG,샘플 외인,SP,1995-03-02,,,,15,1,1,,,2.40
 `;
 
+// 내장 근사 명단(이름 변형본)을 데이터 팩 형식으로 만든다
+export function realPack(country) {
+  const L = LEAGUES[country];
+  const data = ROSTER_DATA[country] || {};
+  // 근사 능력은 "주전급 평균" 기준이라 게임의 능력 눈금(리그 평균 약 55)에 맞게 평균을 옮기고 약간 눌러 준다
+  const all = Object.values(data).flat().map((r) => r[3]);
+  const mean = all.reduce((a, b) => a + b, 0) / Math.max(1, all.length);
+  const target = 55;
+  const fit = (o) => Math.round(clamp(target + (o - mean) * 0.8, 30, 92));
+  const teams = L.teams.filter((t) => data[t.short]).map((t) => ({ team: t.short, players: data[t.short].map(([name, pos, age, ovr, fx = 0, hype]) => ({ name, pos, age, ovr: fit(ovr), fx, hype })) }));
+  return { format: PACK_FORMAT, version: 1, name: '근사 명단(이름 일부 변형)', asOf: '2026-03-25', country, teams };
+}
+
 export function validatePack(pack) {
   const errors = [], warnings = [];
   if (!pack || typeof pack !== 'object') return { ok: false, errors: ['데이터를 읽을 수 없습니다'], warnings, stats: { teams: 0, players: 0 } };
@@ -160,6 +174,7 @@ export function applyPack(s, pack, rng, ctx, { mask = false } = {}) {
   const L = LEAGUES[s.country];
   const keys = teamKeys(s.country);
   const stats = { teams: 0, players: 0 };
+  const stats_real = new Set();
   for (const c of pack.teams) {
     const idx = keys.get(norm(c.team));
     if (idx === undefined) continue;
@@ -185,12 +200,27 @@ export function applyPack(s, pack, rng, ctx, { mask = false } = {}) {
       const same = free.filter((q) => q.pos === pos), role2 = free.filter((q) => q.role === role);
       const pool = same.length ? same : role2;
       if (!pool.length) continue;
-      pool.sort((a, b) => Math.abs(ovrOf(a) - ovr) - Math.abs(ovrOf(b) - ovr));
+      // 외국인 선수는 외국인 자리를, 일반 선수는 일반 자리를 먼저 대체해 외국인 한도를 지킨다
+      const pen = (q) => (fx ? (q.fx === fx ? 0 : 1) : q.fx ? 1 : 0);
+      pool.sort((a, b) => pen(a) - pen(b) || Math.abs(ovrOf(a) - ovr) - Math.abs(ovrOf(b) - ovr));
       const v = pool[0];
       free.splice(free.indexOf(v), 1);
       p.act = v.act;
       t.players[t.players.indexOf(v)] = p;
+      stats_real.add(p.id);
       stats.players++;
+    }
+    // 외국인 한도(일반 3명/아시아쿼터 1명)를 넘으면 가상 외국인 선수를 국내 선수로 바꾼다
+    if (L.foreign) {
+      const real = new Set(t.players.filter((p) => stats_real.has(p.id)).map((p) => p.id));
+      for (const [fx, max] of [[1, 3], [2, 1]]) {
+        while (t.players.filter((p) => p.fx === fx).length > max) {
+          const v = t.players.filter((p) => p.fx === fx && !real.has(p.id)).sort((a, b) => ovrOf(a) - ovrOf(b))[0];
+          if (!v) break;
+          v.fx = 0;
+          v.name = genName(rng, ctx.used, ctx.lang);
+        }
+      }
     }
   }
   s.pack = { name: pack.name || '가져온 데이터', asOf: pack.asOf || null, teams: stats.teams, players: stats.players, masked: !!mask };

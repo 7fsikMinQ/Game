@@ -3,7 +3,7 @@
 const CACHE = 'baseball-v2';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
-  'src/app.js', 'src/core.js', 'src/data.js', 'src/game.js', 'src/league.js', 'src/market.js', 'src/pack.js', 'src/player.js', 'src/rng.js', 'src/roster.js', 'src/sim.js', 'src/storage.js', 'src/util.js', 'src/views.js',
+  'src/app.js', 'src/core.js', 'src/data.js', 'src/game.js', 'src/league.js', 'src/market.js', 'src/pack.js', 'src/player.js', 'src/rng.js', 'src/roster-data.js', 'src/roster.js', 'src/sim.js', 'src/storage.js', 'src/util.js', 'src/views.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

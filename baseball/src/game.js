@@ -1,12 +1,13 @@
 // 게임 상태와 규칙. 화면/브라우저에 의존하지 않아서 Node에서 그대로 테스트한다.
 import { createRng } from './rng.js';
 import { LEAGUES } from './data.js';
-import { createLeague, makeSchedule, startBracket, nextRound, seriesHome, seriesOver, seriesRecord, ROUND_NAME } from './league.js';
+import { createLeague, fitPayroll, makeSchedule, startBracket, nextRound, seriesHome, seriesOver, seriesRecord, ROUND_NAME } from './league.js';
 import { simulateGame, ENV, blankBat } from './sim.js';
 import { autoRoster, validateRoster, counts, buildLineup, battingOrder } from './roster.js';
 import { ovrOf, marketWage, ageUp, genPlayer, retireAge, valueOf } from './player.js';
 import { Lof, userTeam, withRng, ctxOf, addNews, payroll, capPayroll, annualRevenue, annualOpex, budgetOf, teamOvr, winPct, findPlayer, seasonLabel, seasonYear } from './core.js';
 import * as M from './market.js';
+import { applyPack, realPack } from './pack.js';
 import { clamp, r2, fmtMoney } from './util.js';
 
 export const VERSION = 2;
@@ -24,7 +25,7 @@ export { withRng, Lof, userTeam, findPlayer, seasonLabel, seasonYear, payroll, c
 export * from './market.js';
 
 // ───────── 새 게임 ─────────
-export function newGame(seed, now, country = 'mlb') {
+export function newGame(seed, now, country = 'mlb', { real = false } = {}) {
   const rng = createRng(seed);
   const { teams, nextId } = createLeague(rng, country);
   const L = LEAGUES[country];
@@ -36,6 +37,10 @@ export function newGame(seed, now, country = 'mlb') {
     market: { free: [], foreign: [] }, offers: [], news: [], history: { games: [], seasons: [] }, latest: null, seq: 0,
     streak: [], totals: { games: 0, wins: 0, earned: 0 }, dev: { timeScale: 1, used: false }, lastBackupAt: 0, over: 0,
   };
+  if (real) {
+    applyPack(s, realPack(country), rng, ctxOf(s, rng));
+    s.teams.forEach((t) => fitPayroll(L, L.teams[t.id], t.players));
+  }
   for (const t of teams) autoRoster(t, L);
   s.market.free = M.genFreePool(s, rng, 30);
   s.market.foreign = M.genForeignPool(s, rng, 12);

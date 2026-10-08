@@ -344,3 +344,6 @@ li.mine { background: var(--sel); }
 .sheet-h h2 { overflow-wrap: anywhere; }
 
 @media (max-width: 360px) { .standings th, .standings td { padding-left: 3px; padding-right: 3px; } .standings .nm { font-size: 12px; } .standings td.nm i { margin-right: 4px; } .standings .rk { width: 20px; } }
+
+/* 한글은 단어 단위로 줄바꿈, 긴 영문·숫자는 넘치지 않게 */
+body { word-break: keep-all; overflow-wrap: break-word; }

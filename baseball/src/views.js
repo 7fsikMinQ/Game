@@ -28,17 +28,18 @@ const grp = (pos) => (pos === 'C' ? 'C' : ['1B', '2B', '3B', 'SS'].includes(pos)
 const cls = (v) => (v >= 75 ? 'a4' : v >= 60 ? 'a3' : v >= 45 ? 'a2' : 'a1');
 
 // ───────── 시작 화면 ─────────
-export function leagueSelectView() {
+export function leagueSelectView(ui = {}) {
   const info = {
     mlb: 'AL·NL 각 3개 지구 · 정규 162경기 · 포스트시즌 12팀 · 사치세(CBT $244M) · 26인 엔트리',
-    kbo: '10팀 · 정규 144경기 · 포스트시즌 5팀 · 경쟁균형세(상한 143.97억) · 외국인 3+아시아쿼터 1 · 29인 엔트리',
+    kbo: '정규 144경기 · 포스트시즌 5팀 · 경쟁균형세(상한 143.97억) · 외국인 3+아시아쿼터 1 · 29인 엔트리',
   };
   const cards = COUNTRIES.map((c) => {
     const L = LEAGUES[c];
-    return `<li><button class="rowbtn big" data-act="pick-league" data-id="${c}"><span class="grow"><b>${L.name}</b> <span class="mute">${L.long}</span><small>${L.teams.length}팀 · ${info[c]}</small></span><span class="chev">›</span></button></li>`;
+    return `<li><button class="rowbtn big" data-act="pick-league" data-id="${c}"><span class="grow"><b>${L.name}</b>${L.name === L.long ? '' : ` <span class="mute">${L.long}</span>`}<small>${L.teams.length}팀 · ${info[c]}</small></span><span class="chev">›</span></button></li>`;
   }).join('');
   return `<section class="head"><div><span class="eyebrow">새 게임</span><h2>리그를 고르세요</h2></div></section>
-  <p class="mute">구단은 <b>2026 시즌 실제 구단</b>이고, 선수는 <b>가상 선수</b>입니다. 실제 선수 이름·초상·정확한 능력치는 앱에 넣지 않았습니다. 대신 직접 구한 CSV로 <b>실제 선수 이름·나이·능력</b>을 이 기기 안에서만 가져올 수 있습니다.</p>
+  <p class="mute">구단은 <b>2026 시즌 실제 구단</b>입니다. 선수는 실제 로스터를 <b>근사해서</b> 만든 이름 변형 선수(주요 선수만)와 가상 선수가 섞여 있습니다. 직접 구한 CSV는 아래 데이터 팩으로 가져올 수 있습니다.</p>
+  <div class="card" style="margin-top:12px"><div class="row between"><div><b>실제 기반 명단 사용</b><small>2026 시즌 로스터를 웹 검색으로 추정해 만든 근사 명단입니다. 이름은 한 글자씩 바꿨고 능력은 성적·평판으로 판단한 근사값입니다. 꺼두면 전부 가상 선수입니다.</small></div><button class="btn small${ui.realRoster ? '' : ' ghost'}" data-act="toggle-real">${ui.realRoster ? '켜짐' : '꺼짐'}</button></div></div>
   <ul class="list" style="margin-top:12px">${cards}</ul>
   <h3>내 데이터 가져오기 <small class="mute" style="display:inline">선택</small></h3>
   <div class="card"><div class="row between"><div><b>실제 선수 데이터 팩</b><small>CSV/JSON으로 이름·나이·포지션·능력·유망주 등급·연봉을 반영합니다.</small></div><button class="btn small" data-act="import-open">가져오기</button></div></div>`;

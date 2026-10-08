@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as G from '../src/game.js';
 import { parsePackText, applyPack, csvToPack, validatePack, CSV_TEMPLATE, ageFromBirth, ovrFromShow, teamKeys } from '../src/pack.js';
 import { createRng } from '../src/rng.js';
+import { LEAGUES as LEAGUES_ } from '../src/data.js';
 import { ctxOf } from '../src/core.js';
 
 const apply = (s, pack) => { const rng = createRng(3); return applyPack(s, pack, rng, ctxOf(s, rng)); };
@@ -124,4 +125,59 @@ test('이름 한 글자 바꾸기: 결정적이고, 정확히 한 글자만 달�
   assert.ok(s.teams[0].players.some((p) => p.name === maskName('김하성')));
   assert.ok(!s.teams[0].players.some((p) => p.name === '김하성'));
   assert.equal(s.pack.masked, true);
+});
+
+test('내장 근사 명단: 모든 구단에 데이터가 있고, 값 범위·중복·이름 변형이 올바르다', async () => {
+  const { ROSTER_DATA } = await import('../src/roster-data.js');
+  const { realPack } = await import('../src/pack.js');
+  const { LEAGUES } = await import('../src/data.js');
+  for (const c of ['mlb', 'kbo']) {
+    for (const t of LEAGUES[c].teams) {
+      const rows = ROSTER_DATA[c][t.short];
+      assert.ok(rows && rows.length >= 8, `${c} ${t.short} 선수 ${rows ? rows.length : 0}명`);
+      assert.ok(rows.filter((r) => r[1] === 'SP').length >= 3, `${t.short} 선발`);
+      for (const [name, pos, age, ovr, fx] of rows) {
+        assert.ok(name && name.length <= 24); assert.ok(['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'SP', 'RP'].includes(pos), `${name} ${pos}`);
+        assert.ok(age >= 18 && age <= 45 && ovr >= 30 && ovr <= 95, `${name} ${age} ${ovr}`);
+        if (fx) assert.ok(c === 'kbo');
+      }
+      assert.equal(new Set(rows.map((r) => r[0])).size, rows.length, `${t.short} 이름 중복`);
+    }
+    const p = realPack(c);
+    assert.equal(p.teams.length, LEAGUES[c].teams.length);
+    assert.ok(parsePackText(JSON.stringify(p)).ok);
+  }
+  const all = JSON.stringify(ROSTER_DATA);
+  for (const real of ['Aaron Judge', 'Shohei Ohtani', 'Mookie Betts', '김도영', '류현진', '안현민']) assert.ok(!all.includes(real), `원래 이름이 남아 있음: ${real}`);
+});
+
+test('실제 기반 명단으로 새 게임: 구단 크기·1군·외국인 한도·포수가 유지되고 전력 분포가 현실적이며 한 시즌이 진행된다', () => {
+  for (const c of ['mlb', 'kbo']) {
+    const L = LEAGUES_[c];
+    const s = G.newGame(9, 0, c, { real: true });
+    assert.ok(s.pack.players > (c === 'mlb' ? 350 : 130));
+    for (const t of s.teams) {
+      assert.equal(t.players.length, L.active + L.farmMax);
+      assert.equal(t.players.filter((p) => p.act).length, L.active);
+      assert.ok(t.players.filter((p) => p.pos === 'C').length >= 2);
+      if (c === 'kbo') { assert.ok(t.players.filter((p) => p.fx === 1).length <= 3); assert.ok(t.players.filter((p) => p.fx === 2).length <= 1); }
+      assert.ok(G.payroll(t) > 0.4 * G.budgetOf(s, t) && G.payroll(t) < 2.2 * G.budgetOf(s, t), `${t.name} 연봉 ${G.payroll(t)} 예산 ${G.budgetOf(s, t)}`);
+    }
+    const o = s.teams.map((t) => G.teamOvr(t).total);
+    const m = o.reduce((a, b) => a + b) / o.length;
+    assert.ok(m > 54 && m < 62, `${c} 평균 전력 ${m}`);
+    G.chooseClub(s, 0, 0);
+    G.dev.toOffseason(s);
+    const pct = G.standings(s).map((r) => r.pct);
+    assert.ok(Math.max(...pct) < 0.76 && Math.min(...pct) > 0.25, `${c} 승률 ${Math.max(...pct)} ${Math.min(...pct)}`);
+  }
+});
+
+test('실제 기반 명단도 장기 시뮬레이션과 저장·복원을 통과한다', async () => {
+  const { pack, unpack } = await import('../src/storage.js');
+  const s = G.newGame(4, 0, 'kbo', { real: true });
+  G.chooseClub(s, 0, 0);
+  for (let y = 0; y < 3; y++) { G.dev.toOffseason(s); G.startNextSeason(s, 0, { auto: true }); }
+  assert.deepEqual(unpack(pack(s, 1)).state, JSON.parse(JSON.stringify(s)));
+  for (const t of s.teams) { assert.ok(t.players.filter((p) => p.fx === 1).length <= 3); assert.ok(t.players.filter((p) => p.pos === 'C').length >= 1); }
 });
