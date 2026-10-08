@@ -131,14 +131,15 @@ function act(name, d) {
   switch (name) {
     // 시작
     case 'pick-league': s = G.newGame(seed(), now, d.id); ui.setup = 'club'; render(); break;
-    case 'import-open': ui.sheet = { type: 'import' }; openSheet(importSheet({ text: ui.packText, result: ui.packResult })); break;
-    case 'import-check': { ui.packText = $('#pk-in').value; ui.packResult = parsePackText(ui.packText); openSheet(importSheet({ text: ui.packText, result: ui.packResult })); break; }
+    case 'import-open': ui.sheet = { type: 'import' }; openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break;
+    case 'import-mask': ui.packMask = !ui.packMask; ui.packText = $('#pk-in').value; openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break;
+    case 'import-check': { ui.packText = $('#pk-in').value; ui.packResult = parsePackText(ui.packText); openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); break; }
     case 'import-template': (navigator.clipboard ? navigator.clipboard.writeText(csvTemplate()) : Promise.reject()).then(() => toast('양식을 복사했습니다'), () => toast('복사하지 못했습니다')); break;
     case 'import-go': {
       const pack = ui.packResult && ui.packResult.pack;
       if (!pack) break;
       s = G.newGame(seed(), now, pack.country);
-      G.withRng(s, (rng) => applyPack(s, pack, rng, { rng, nextId: () => s.nextPid++, used: new Set(s.teams.flatMap((t) => t.players.map((p) => p.name))), L: G.Lof(s), lang: s.country === 'kbo' ? 'kr' : 'en' }));
+      G.withRng(s, (rng) => applyPack(s, pack, rng, { rng, nextId: () => s.nextPid++, used: new Set(s.teams.flatMap((t) => t.players.map((p) => p.name))), L: G.Lof(s), lang: s.country === 'kbo' ? 'kr' : 'en' }, { mask: ui.packMask }));
       ui.setup = 'club'; closeSheet(); render(); window.scrollTo(0, 0);
       break;
     }
@@ -229,7 +230,7 @@ document.addEventListener('click', guard((e) => {
 }));
 document.addEventListener('change', (e) => {
   if (e.target.id === 'bk-file' && e.target.files[0]) e.target.files[0].text().then(restoreFrom);
-  if (e.target.id === 'pk-file' && e.target.files[0]) e.target.files[0].text().then((t) => { ui.packText = t.length > 200000 ? '' : t; ui.packResult = parsePackText(t); openSheet(importSheet({ text: ui.packText, result: ui.packResult })); });
+  if (e.target.id === 'pk-file' && e.target.files[0]) e.target.files[0].text().then((t) => { ui.packText = t.length > 200000 ? '' : t; ui.packResult = parsePackText(t); openSheet(importSheet({ text: ui.packText, result: ui.packResult, mask: ui.packMask })); });
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tick(); else persist(); });
 window.addEventListener('pagehide', persist);

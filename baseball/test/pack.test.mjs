@@ -90,3 +90,38 @@ test('CSV 파서: 따옴표·쉼표·탭 구분·BOM을 처리한다', () => {
   const p = csvToPack('﻿league\tteam\tname\tpos\nmlb\tYankees\t"Doe, John"\tC\n');
   assert.equal(p.teams[0].players[0].name, 'Doe, John');
 });
+
+test('성적(WAR/OPS/ERA)으로 능력을 추정한다', async () => {
+  const { ovrFromStats } = await import('../src/pack.js');
+  assert.equal(ovrFromStats({ war: 0 }, 'H'), 48);
+  assert.ok(ovrFromStats({ war: 8 }, 'H') > ovrFromStats({ war: 3 }, 'H'));
+  assert.ok(ovrFromStats({ ops: 0.95 }, 'H') > ovrFromStats({ ops: 0.72 }, 'H'));
+  assert.ok(ovrFromStats({ era: 2.0 }, 'P') > ovrFromStats({ era: 4.2 }, 'P'));
+  assert.equal(ovrFromStats({}, 'H'), undefined);
+  const s = G.newGame(2, 0, 'kbo');
+  const r = parsePackText('league,team,name,pos,age,era,ops\nkbo,LG,에이스,SP,28,2.00,\nkbo,LG,강타자,CF,27,,0.950\n');
+  assert.ok(r.ok);
+  apply(s, r.pack);
+  const t = s.teams[0];
+  assert.equal(G.ovrOf(t.players.find((p) => p.name === '에이스')), ovrFromStats({ era: 2 }, 'P'));
+  assert.equal(G.ovrOf(t.players.find((p) => p.name === '강타자')), ovrFromStats({ ops: 0.95 }, 'H'));
+});
+
+test('이름 한 글자 바꾸기: 결정적이고, 정확히 한 글자만 달라지며, 적용 옵션이 동작한다', async () => {
+  const { maskName } = await import('../src/pack.js');
+  for (const n of ['김하성', '이정후', '류현진', 'Shohei Ohtani', 'Aaron Judge']) {
+    const m = maskName(n);
+    assert.equal(maskName(n), m);
+    assert.notEqual(m, n);
+    assert.equal(m.length, n.length);
+    let diff = 0; for (let i = 0; i < n.length; i++) if (n[i] !== m[i]) diff++;
+    assert.equal(diff, 1, `${n} → ${m}`);
+  }
+  const s = G.newGame(3, 0, 'kbo');
+  const r = parsePackText('league,team,name,pos,age,ovr\nkbo,LG,김하성,SS,30,70\n');
+  const rng = createRng(3);
+  applyPack(s, r.pack, rng, ctxOf(s, rng), { mask: true });
+  assert.ok(s.teams[0].players.some((p) => p.name === maskName('김하성')));
+  assert.ok(!s.teams[0].players.some((p) => p.name === '김하성'));
+  assert.equal(s.pack.masked, true);
+});

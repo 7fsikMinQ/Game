@@ -35,6 +35,33 @@ export function ageFromBirth(birth, asOf = '2026-10-08') {
   return age;
 }
 // MLB The Show 류의 40~99 OVR을 이 게임 스케일로 환산(근사). 문서에 근거를 적었다.
+// 성적 → 능력 추정(근사). WAR 0→48, 3→58, 6→67, 9→77 / 타자 OPS .720→50, .900→68 / 투수 ERA 4.20→50, 3.00→61, 2.00→70
+export function ovrFromStats(cp, role) {
+  if (cp.war !== undefined) return clamp(Math.round(48 + 3.2 * cp.war), 30, 92);
+  if (role === 'H' && cp.ops !== undefined) return clamp(Math.round(50 + (cp.ops - 0.72) * 100), 30, 92);
+  if (role === 'P' && cp.era !== undefined) return clamp(Math.round(50 + (4.2 - cp.era) * 9), 30, 92);
+  return undefined;
+}
+// 이름 한 글자만 바꿔서(결정적) 실제 선수와 똑같지 않게 만든다: 한글은 마지막 글자, 영문은 이름 첫 단어의 마지막 글자
+const SWAP_KO = '민준서호진우현성';
+export function maskName(name) {
+  const n = String(name).trim();
+  let h = 0; for (const c of n) h = (Math.imul(h, 31) + c.codePointAt(0)) | 0;
+  h = Math.abs(h);
+  if (/[가-힣]/.test(n[n.length - 1])) {
+    const last = n[n.length - 1];
+    let c = SWAP_KO[h % SWAP_KO.length];
+    if (c === last) c = SWAP_KO[(h + 1) % SWAP_KO.length];
+    return n.slice(0, -1) + c;
+  }
+  const parts = n.split(/\s+/);
+  const w = parts[0];
+  const alt = 'aeioulnrst';
+  let c = alt[h % alt.length];
+  if (c === w[w.length - 1].toLowerCase()) c = alt[(h + 1) % alt.length];
+  parts[0] = w.slice(0, -1) + c;
+  return parts.join(' ');
+}
 export const ovrFromShow = (show) => clamp(Math.round(0.9 * (show - 40) + 33), 25, 95);
 
 export function parseCSV(text) {
@@ -69,15 +96,15 @@ export function csvToPack(text, { name = '가져온 데이터', asOf = '2026-10-
     if (!team) continue;
     if (!teams.has(team)) teams.set(team, { team, players: [] });
     const nm = r.name || r['선수'];
-    if (nm) teams.get(team).players.push({ name: nm, pos: r.pos || r['포지션'], birth: r.birth || r['생년월일'] || undefined, age: num(r.age || r['나이']), ovr: num(r.ovr), show: num(r.show), pot: num(r.pot), hype: num(r.hype), salary: num(r.salary || r['연봉']), years: num(r.years), fx: r.fx || r['외국인'] || undefined });
+    if (nm) teams.get(team).players.push({ name: nm, pos: r.pos || r['포지션'], birth: r.birth || r['생년월일'] || undefined, age: num(r.age || r['나이']), ovr: num(r.ovr), show: num(r.show), pot: num(r.pot), hype: num(r.hype), salary: num(r.salary || r['연봉']), years: num(r.years), war: num(r.war), ops: num(r.ops), era: num(r.era), fx: r.fx || r['외국인'] || undefined });
   }
   return { format: PACK_FORMAT, version: 1, name, asOf, country, teams: [...teams.values()] };
 }
-export const CSV_TEMPLATE = `league,team,name,pos,birth,ovr,pot,hype,salary,years,fx
-mlb,Yankees,샘플 타자,RF,1999-05-12,80,80,0,35,5,
-mlb,Yankees,샘플 투수,SP,1996-08-30,74,74,0,25,3,
-mlb,Yankees,샘플 신예,SS,2007-02-20,50,78,3,0.8,3,
-kbo,LG,샘플 외인,SP,1995-03-02,72,72,0,15,1,1
+export const CSV_TEMPLATE = `league,team,name,pos,birth,ovr,pot,hype,salary,years,fx,war,ops,era
+mlb,Yankees,샘플 타자,RF,1999-05-12,80,80,0,35,5,,,,
+mlb,Yankees,샘플 투수,SP,1996-08-30,74,74,0,25,3,,,,
+mlb,Yankees,샘플 신예,SS,2007-02-20,50,78,3,0.8,3,,,,
+kbo,LG,샘플 외인,SP,1995-03-02,,,,15,1,1,,,2.40
 `;
 
 export function validatePack(pack) {
@@ -129,7 +156,7 @@ export function parsePackText(text) {
 }
 
 // s 는 newGame(seed, now, pack.country) 직후의 월드. 구단 선수를 팩 내용으로 바꾼다.
-export function applyPack(s, pack, rng, ctx) {
+export function applyPack(s, pack, rng, ctx, { mask = false } = {}) {
   const L = LEAGUES[s.country];
   const keys = teamKeys(s.country);
   const stats = { teams: 0, players: 0 };
@@ -148,10 +175,10 @@ export function applyPack(s, pack, rng, ctx) {
       let age = cp.birth ? ageFromBirth(cp.birth, pack.asOf) : cp.age;
       if (!(age >= 16 && age <= 46)) age = 27;
       const fx = cp.fx === undefined || cp.fx === '' ? 0 : /^(2|asia|아시아)/i.test(String(cp.fx)) ? 2 : /^(1|y|true|외|foreign)/i.test(String(cp.fx)) ? 1 : 0;
-      let ovr = cp.ovr ?? (cp.show !== undefined ? ovrFromShow(cp.show) : undefined);
+      let ovr = cp.ovr ?? (cp.show !== undefined ? ovrFromShow(cp.show) : undefined) ?? ovrFromStats(cp, role);
       if (ovr === undefined && cp.salary > 0) ovr = clamp(Math.round(50 + Math.log(Math.max(cp.salary, L.minSal) / L.wage.base) / L.wage.k), 30, 90);
       if (ovr === undefined) ovr = clamp(Math.round(mean - 4 + rng.normal(0, 8)), 30, 85);
-      const p = genPlayer(ctx, { role, pos, ovr, age, hype: age <= 23 ? cp.hype ?? 0 : 0, pot: cp.pot, name: String(cp.name).trim().slice(0, 24), fx, act: 1, exact: true });
+      const p = genPlayer(ctx, { role, pos, ovr, age, hype: age <= 23 ? cp.hype ?? 0 : 0, pot: cp.pot, name: mask ? maskName(String(cp.name).trim().slice(0, 24)) : String(cp.name).trim().slice(0, 24), fx, act: 1, exact: true });
       if (cp.salary > 0) p.sal = Math.max(L.minSal, Math.round(cp.salary * 100) / 100);
       if (cp.years > 0) p.yrs = clamp(Math.round(cp.years), 1, 8);
       // 같은 포지션 → 같은 역할 순으로 가상 선수를 대체(가장 비슷한 능력의 선수)
@@ -166,7 +193,7 @@ export function applyPack(s, pack, rng, ctx) {
       stats.players++;
     }
   }
-  s.pack = { name: pack.name || '가져온 데이터', asOf: pack.asOf || null, teams: stats.teams, players: stats.players };
+  s.pack = { name: pack.name || '가져온 데이터', asOf: pack.asOf || null, teams: stats.teams, players: stats.players, masked: !!mask };
   return stats;
 }
 export { marketWage };

@@ -11,7 +11,7 @@
 
 ## 1. 자동 테스트 (`npm test`)
 
-Node 내장 테스트 러너(`node:test`)를 씁니다. 설치할 것이 없습니다. `tools/test.mjs` 가 `*/test/*.test.mjs` 를 전부 찾아서 실행합니다. 현재 **210개**(야구 90 + 축구 120), 약 45초(장기 시뮬레이션·퍼징 테스트가 포함돼 있어 느림).
+Node 내장 테스트 러너(`node:test`)를 씁니다. 설치할 것이 없습니다. `tools/test.mjs` 가 `*/test/*.test.mjs` 를 전부 찾아서 실행합니다. 현재 **212개**(야구 92 + 축구 120), 약 45초(장기 시뮬레이션·퍼징 테스트가 포함돼 있어 느림).
 
 ```powershell
 npm test                                         # 전체
@@ -19,7 +19,7 @@ node --test soccer/test/market.test.mjs          # 파일 하나만
 node --test --test-name-pattern="임대" soccer/test/market.test.mjs   # 이름으로 하나만
 ```
 
-성공하면 맨 아래에 `ℹ pass 210` / `ℹ fail 0`, 실패하면 `✖` 와 어떤 값이 기대와 달랐는지 나옵니다.
+성공하면 맨 아래에 `ℹ pass 212` / `ℹ fail 0`, 실패하면 `✖` 와 어떤 값이 기대와 달랐는지 나옵니다.
 
 ### 축구 테스트가 확인하는 것 (120개)
 

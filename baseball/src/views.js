@@ -389,10 +389,11 @@ export function backupSheet(text) {
   <textarea id="bk-out" readonly rows="2" style="width:100%;font-size:16px;margin-top:8px">${esc(text.slice(0, 120))}…</textarea>`;
 }
 export const csvTemplate = () => CSV_TEMPLATE;
-export function importSheet({ text = '', result = null } = {}) {
+export function importSheet({ text = '', result = null, mask = false } = {}) {
   const r = result;
   return `<header class="sheet-h"><div><h2>데이터 팩 가져오기</h2><span class="mute">CSV 또는 JSON · 이 기기 안에서만 처리됩니다</span></div></header>
-  <textarea id="pk-in" rows="6" placeholder="league,team,name,pos,birth,ovr,pot,hype,salary,years,fx" style="width:100%;font-size:16px">${esc(text)}</textarea>
+  <textarea id="pk-in" rows="6" placeholder="league,team,name,pos,birth,ovr,pot,hype,salary,years,fx,war,ops,era" style="width:100%;font-size:16px">${esc(text)}</textarea>
+  <div class="card"><div class="row between"><div><b>이름 한 글자 바꾸기</b><small>가져온 선수 이름의 한 글자(영문은 이름 첫 단어의 끝 글자)를 바꿔 실제 선수와 똑같지 않게 합니다</small></div><button class="btn small${mask ? '' : ' ghost'}" data-act="import-mask">${mask ? '켜짐' : '꺼짐'}</button></div></div>
   <div class="actions col"><button class="btn" data-act="import-check">검사하기</button><label class="btn ghost" style="text-align:center">파일 선택<input id="pk-file" type="file" accept=".csv,.json,text/csv,application/json,text/plain" hidden></label><button class="btn ghost" data-act="import-template">양식 복사</button></div>
   ${r ? `<div class="card ${r.ok ? 'good' : 'alert'}"><b>${r.ok ? '사용할 수 있습니다' : '고쳐야 할 점이 있습니다'}</b><small>구단 ${r.stats.teams}개 · 선수 ${r.stats.players}명${r.errors.length ? '<br>' + r.errors.map(esc).join('<br>') : ''}${r.warnings.length ? '<br><span class="mute">' + r.warnings.map(esc).join('<br>') + '</span>' : ''}</small></div>${r.ok ? '<div class="actions col"><button class="btn" data-act="import-go">이 데이터로 새 게임 만들기</button></div>' : ''}` : ''}
   <div class="actions"><button class="btn ghost" data-act="close">닫기</button></div>`;
