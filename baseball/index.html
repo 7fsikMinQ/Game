@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>야구단</title>
+<meta name="description" content="앱을 닫아도 시즌이 흘러가는 방치형 야구단 운영 게임">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121612" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="야구단">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <header class="top"><h1 id="brand">야구단</h1><span id="season"></span></header>
+  <main id="view"></main>
+  <nav id="nav" class="nav"></nav>
+</div>
+<div id="sheet" class="sheet-wrap" hidden>
+  <div class="backdrop" data-act="close"></div>
+  <div class="sheet" id="sheetbody" role="dialog" aria-modal="true"></div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<noscript>이 게임은 JavaScript가 필요합니다.</noscript>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

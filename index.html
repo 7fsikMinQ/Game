@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game</title>
+<meta name="theme-color" content="#f3eee1">
+<style>
+  :root { --bg:#f3eee1; --card:#faf6ea; --ink:#1d1c18; --mute:#77735f; --line:#ddd6c0; --green:#1f5a3a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121612; --card:#1a201a; --ink:#ece7d8; --mute:#98957f; --line:#2d362d; --green:#7fcf9c; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; padding: max(24px, env(safe-area-inset-top)) 16px 40px; }
+  main { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 20px; letter-spacing: .04em; margin: 8px 0 4px; }
+  p { color: var(--mute); margin: 0 0 20px; font-size: 13px; }
+  ul { list-style:none; margin:0; padding:0; background:var(--card); border:1px solid var(--line); border-radius:6px; }
+  li { border-bottom:1px solid var(--line); }
+  li:last-child { border-bottom:0; }
+  a, .soon { display:flex; justify-content:space-between; align-items:center; padding:14px; color:inherit; text-decoration:none; }
+  a b { color: var(--green); }
+  small { display:block; color:var(--mute); font-size:12px; }
+  .soon { color: var(--mute); }
+</style>
+</head>
+<body>
+<main>
+  <h1>GAME</h1>
+  <p>앱을 닫아도 시간이 흐르는 방치형 게임 모음. 게임별로 따로 홈 화면에 추가해서 쓰세요.</p>
+  <ul>
+    <li><a href="baseball/"><span>야구단<small>구단을 키워 우승을 노린다</small></span><b>열기</b></a></li>
+    <li><span class="soon">축구 구단<small>준비 중</small></span></li>
+  </ul>
+</main>
+</body>
+</html>

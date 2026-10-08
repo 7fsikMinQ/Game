@@ -1,0 +1,215 @@
+/* 종이 + 잉크 + 구장 잔디색. 장식 대신 표와 숫자로 보여준다. */
+:root {
+  --bg: #f3eee1;
+  --card: #faf6ea;
+  --ink: #1d1c18;
+  --mute: #77735f;
+  --line: #ddd6c0;
+  --green: #1f5a3a;
+  --green-ink: #ece6d3;
+  --clay: #b4512c;
+  --win: #2d6a45;
+  --loss: #a8402a;
+  --sel: #e7e0c9;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  --top: env(safe-area-inset-top, 0px);
+  --bot: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121612;
+    --card: #1a201a;
+    --ink: #ece7d8;
+    --mute: #98957f;
+    --line: #2d362d;
+    --green: #0f2e1d;
+    --green-ink: #e6e0cc;
+    --clay: #e08a62;
+    --win: #7fcf9c;
+    --loss: #e5826b;
+    --sel: #232c23;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 var(--sans);
+  overscroll-behavior-y: none;
+}
+body.noscroll { overflow: hidden; }
+#app { max-width: 520px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; padding: calc(var(--top) + 52px) 16px calc(var(--bot) + 76px); }
+h1, h2, h3, p { margin: 0; }
+h2 { font-size: 22px; letter-spacing: -0.01em; line-height: 1.2; }
+h3 { font-size: 13px; font-weight: 600; color: var(--mute); margin: 22px 0 8px; letter-spacing: 0.02em; }
+button { font: inherit; color: inherit; }
+.mute { color: var(--mute); }
+.small { font-size: 12px; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.grow { flex: 1; min-width: 0; }
+small { display: block; color: var(--mute); font-size: 12px; font-weight: 400; margin-top: 1px; }
+
+/* 상단 바 */
+.top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  padding: calc(var(--top) + 10px) max(16px, calc((100% - 488px) / 2)) 10px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.top h1 { font-size: 16px; font-weight: 800; letter-spacing: 0.04em; user-select: none; -webkit-user-select: none; }
+#season { font: 12px var(--mono); color: var(--mute); }
+
+/* 하단 탭 */
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; justify-content: center; gap: 0;
+  padding: 0 max(8px, calc((100% - 504px) / 2)) var(--bot);
+  background: var(--bg); border-top: 1px solid var(--line);
+}
+.tab { flex: 1; background: none; border: 0; padding: 9px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--mute); font-size: 11px; cursor: pointer; }
+.tab svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tab.on { color: var(--green); font-weight: 700; }
+@media (prefers-color-scheme: dark) { .tab.on { color: var(--win); } }
+
+/* 머리말 */
+.head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; gap: 12px; }
+.eyebrow { display: block; font-size: 12px; color: var(--mute); margin-bottom: 3px; }
+.rec { font-size: 13px; color: var(--mute); white-space: nowrap; }
+.rec b { font: 700 24px var(--mono); color: var(--ink); }
+
+/* 요약 4칸 */
+.stats4 { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 6px; background: var(--card); margin-bottom: 12px; }
+.stats4 > div { padding: 9px 4px 9px 12px; border-left: 1px solid var(--line); min-width: 0; }
+.stats4 > div:first-child { border-left: 0; }
+.stats4 span { display: block; font-size: 11px; color: var(--mute); }
+.stats4 b { display: block; font: 700 16px var(--mono); margin-top: 1px; white-space: nowrap; }
+.stats4 small { font-size: 11px; }
+
+/* 카드 */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; }
+.kv { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted var(--line); }
+.kv:last-child { border-bottom: 0; }
+.kv span { color: var(--mute); }
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+.report { display: flex; gap: 12px; align-items: center; justify-content: space-between; border-left: 3px solid var(--clay); }
+.report p { font-size: 13px; margin-top: 2px; }
+
+/* 다음 경기 */
+.clock { font: 700 26px var(--mono); letter-spacing: 0.02em; }
+.bar { height: 3px; background: var(--line); margin: 8px 0 10px; }
+.bar i { display: block; height: 100%; background: var(--green); }
+@media (prefers-color-scheme: dark) { .bar i { background: var(--win); } }
+.vs { font-size: 14px; }
+
+/* 전광판 */
+.board { background: var(--green); color: var(--green-ink); border-radius: 6px; padding: 10px 8px; overflow-x: auto; border: 1px solid #00000022; }
+.board table { width: 100%; border-collapse: collapse; font: 13px var(--mono); }
+.board th { text-align: left; font: 600 13px var(--sans); padding: 5px 6px; white-space: nowrap; max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+.board td { text-align: center; padding: 5px 0; min-width: 19px; opacity: 0.92; }
+.board thead td { font-size: 11px; opacity: 0.6; padding-bottom: 6px; border-bottom: 1px solid #ffffff2e; }
+.board tbody tr:first-child th, .board tbody tr:first-child td { padding-top: 8px; }
+.board td.x { opacity: 0.35; }
+.board td.run { font-weight: 800; opacity: 1; color: #ffd98a; }
+.board td.tot { font-weight: 700; padding-left: 8px; border-left: 1px solid #ffffff2e; opacity: 1; }
+.board thead td.tot { opacity: 0.6; }
+.board tr.me th { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.meta { font-size: 12px; color: var(--mute); margin: 8px 0 0; }
+
+/* 득점 장면 */
+.plays { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+.plays li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dotted var(--line); color: var(--mute); }
+.plays li b { font: 600 12px var(--mono); min-width: 42px; }
+.plays li.score { color: var(--ink); }
+.plays li.score span { font-weight: 700; }
+.plays li.score b { color: var(--clay); }
+.empty { color: var(--mute); padding: 14px 0; font-size: 14px; }
+
+/* 목록 */
+.list { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.list > li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.list > li:last-child { border-bottom: 0; }
+.list > li:has(.rowbtn) { padding: 0; }
+.rowbtn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: none; border: 0; text-align: left; cursor: pointer; }
+.rowbtn:active:not(:disabled) { background: var(--sel); }
+.rowbtn:disabled { opacity: 0.45; cursor: default; }
+.ovr { font: 800 19px var(--mono); width: 34px; text-align: center; color: var(--green); }
+@media (prefers-color-scheme: dark) { .ovr { color: var(--win); } }
+.chev { color: var(--mute); font-size: 20px; }
+.tag { font: 700 12px var(--sans); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 3px; color: #fff; }
+.tag.w { background: var(--win); }
+.tag.l { background: var(--loss); }
+@media (prefers-color-scheme: dark) { .tag { color: #121612; } }
+.results .num { font-size: 14px; }
+.fac b { font-weight: 700; }
+
+/* 버튼 */
+.btn { appearance: none; background: var(--green); color: var(--green-ink); border: 1px solid var(--green); border-radius: 6px; padding: 11px 16px; font-weight: 700; font-size: 15px; cursor: pointer; text-align: center; }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 600; }
+.btn.danger { color: var(--loss); }
+.btn.small { padding: 6px 11px; font-size: 13px; min-width: 62px; font-family: var(--mono); }
+.btn.small.ghost { font-family: var(--sans); }
+.btn.off, .btn:disabled { background: transparent; color: var(--mute); border-color: var(--line); cursor: default; }
+.actions { display: flex; gap: 8px; margin-top: 14px; }
+.actions > .btn { flex: 1; }
+.actions.col { flex-direction: column; }
+.actions.wrap { flex-wrap: wrap; }
+.actions.wrap > .btn { flex: 0 0 auto; }
+section.actions { margin-top: 18px; flex-direction: column; }
+.filebtn { display: block; }
+
+/* 세그먼트 */
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 12px; background: var(--card); }
+.seg button { flex: 1; background: none; border: 0; padding: 8px 0; font-size: 14px; cursor: pointer; color: var(--mute); border-left: 1px solid var(--line); }
+.seg button:first-child { border-left: 0; }
+.seg button.on { background: var(--ink); color: var(--bg); font-weight: 700; }
+.field { margin-bottom: 4px; }
+.field > span, .lab { display: block; font-size: 12px; color: var(--mute); margin: 14px 0 6px; }
+
+/* 순위표 */
+.tablewrap { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.standings { width: 100%; border-collapse: collapse; font-size: 13px; }
+.standings th { font-weight: 500; color: var(--mute); font-size: 11px; text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.standings td { text-align: right; padding: 9px 6px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.standings tr:last-child td { border-bottom: 0; }
+.standings .nm { text-align: left; font-family: var(--sans); font-weight: 600; white-space: nowrap; }
+.standings td.nm i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 7px; }
+.standings .rk { text-align: center; color: var(--mute); width: 26px; }
+.standings tr.me td { background: var(--sel); }
+.standings tr.cut td { border-bottom: 2px solid var(--ink); }
+
+/* 시트 */
+.sheet-wrap { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet-wrap[hidden] { display: none; }
+.backdrop { position: absolute; inset: 0; background: #0000006b; }
+.sheet { position: relative; width: 100%; max-width: 520px; max-height: 88vh; max-height: 88dvh; overflow-y: auto; background: var(--bg); border-radius: 12px 12px 0 0; padding: 18px 16px calc(var(--bot) + 18px); border-top: 1px solid var(--line); animation: up 0.18s ease-out; }
+@keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.sheet-h .big { text-align: right; }
+.sheet-h .big b { font: 800 34px/1 var(--mono); color: var(--green); }
+@media (prefers-color-scheme: dark) { .sheet-h .big b { color: var(--win); } }
+.stat { display: grid; grid-template-columns: 44px 1fr 28px 76px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px dotted var(--line); }
+.stat .lab { margin: 0; font-size: 13px; color: var(--ink); }
+.stat b { text-align: right; font-size: 15px; }
+.meter { position: relative; height: 6px; background: var(--line); border-radius: 1px; }
+.meter i { position: absolute; inset: 0 auto 0 0; background: var(--green); }
+.meter u { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--clay); text-decoration: none; }
+@media (prefers-color-scheme: dark) { .meter i { background: var(--win); } }
+textarea { width: 100%; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 11px/1.4 var(--mono); resize: none; word-break: break-all; }
+
+/* 토스트 */
+.toast { position: fixed; left: 50%; top: calc(var(--top) + 60px); transform: translate(-50%, -8px); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 6px; font-size: 13px; opacity: 0; pointer-events: none; transition: 0.18s; z-index: 30; max-width: 86vw; text-align: center; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* 간격 보정 */
+h3 + p { margin-bottom: 8px; }
+.tablewrap + p, .list + p, .actions + p, section.actions + p { margin-top: 10px; }
+.stat + .stat { margin-top: 0; }
+.sheet .meta { margin-top: 12px; }
+.sheet .small { margin-top: 2px; }

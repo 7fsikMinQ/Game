@@ -1,0 +1,15 @@
+{
+  "name": "game-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Idle games collection. Each game lives in its own folder and runs as a static PWA.",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node tools/test.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "site": "node tools/build-site.mjs",
+    "smoke": "node tools/smoke.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
