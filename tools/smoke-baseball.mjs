@@ -75,6 +75,10 @@ try {
     await page.locator('.sheet [data-act="trade-toggle"][data-side="get"]').first().click();
     await page.waitForTimeout(350);
     await page.screenshot({ path: path.join(shots, `bb-${scheme}-7-trade.png`) });
+    await page.fill('#tr-cash', '1');
+    await page.click('.sheet [data-act="trade-go"]');
+    await page.waitForTimeout(200);
+    ok(await page.locator('.sheet').isVisible() ? (await page.textContent('.sheet')).includes('제안') : true, `[${scheme}] 트레이드 제안에 상대가 답한다`);
     await page.click('.sheet [data-act="close"]');
     await page.click('[data-act="msub"][data-v="fa"]');
     await page.locator('[data-act="player"]').first().click();

@@ -238,7 +238,7 @@ h3 + p { margin-bottom: 8px; }
 .cond { width: 5px; height: 30px; background: var(--line); border-radius: 2px; display: flex; align-items: flex-end; flex: none; }
 .cond u { display: block; width: 100%; background: var(--win); border-radius: 2px; text-decoration: none; }
 .st { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
-.st.bad { background: var(--loss); color: #fff; } .st.warn { background: var(--amber); color: #fff; } .st.loan { background: var(--blue); color: #fff; }
+.st.good { background: var(--green); color: #fff; } .st.bad { background: var(--loss); color: #fff; } .st.warn { background: var(--amber); color: #fff; } .st.loan { background: var(--blue); color: #fff; }
 .st.loan:empty { display: none; }
 .nt { font: 700 11px var(--sans); padding: 2px 4px; border-radius: 3px; background: var(--line); color: var(--ink); flex: none; width: 54px; text-align: center; white-space: nowrap; }
 .nt.offer, .nt.finance { background: var(--clay); color: #fff; } .nt.injury { background: var(--loss); color: #fff; }
@@ -347,3 +347,6 @@ li.mine { background: var(--sel); }
 
 /* 한글은 단어 단위로 줄바꿈, 긴 영문·숫자는 넘치지 않게 */
 body { word-break: keep-all; overflow-wrap: break-word; }
+.neglog { margin: 8px 0; }
+.neglog li { padding: 8px 12px; font-size: 14px; }
+.neglog li.mine { text-align: right; color: var(--green); font-weight: 700; }

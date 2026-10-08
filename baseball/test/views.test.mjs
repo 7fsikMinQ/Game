@@ -65,7 +65,7 @@ test('트레이드 시트: 선택 전/가능/불가능 메시지', () => {
   let h = V.tradeSheet(s, { trade: { teamId: 10, give: new Set(), get: new Set() } });
   assert.ok(h.includes('양쪽에서 선수를 고르세요') && h.includes('disabled'));
   h = V.tradeSheet(s, { trade: { teamId: 10, give: new Set([junk.id]), get: new Set([star.id]) } });
-  assert.ok(h.includes('가치가 부족'));
+  assert.ok(h.includes('아직 부족합니다'));
 });
 
 test('화면 문자열에 이름이 이스케이프된다 (구단·선수 이름의 HTML)', () => {

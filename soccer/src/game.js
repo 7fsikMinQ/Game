@@ -61,7 +61,7 @@ export function newGame(seed, now, country = 'epl') {
     fac: { training: 0, youth: 0, stadium: 0, scout: 0, medical: 0 }, trainFocus: 'bal',
     settings: { autopilot: true, autoRenew: true },
     history: { games: [], seasons: [] }, latest: null, seq: 0, streak: [], tick: 0, lastFix: null, scrChecked: false,
-    market: { list: [], loan: [], free: [], at: 0 }, listings: [], offers: [], news: [], offseason: null,
+    market: { list: [], loan: [], free: [], at: 0 }, listings: [], offers: [], neg: {}, news: [], offseason: null,
     dev: { timeScale: 1, used: false }, totals: { games: 0, wins: 0 }, lastBackupAt: 0,
   };
   return s;
@@ -476,7 +476,7 @@ export function startNextSeason(s, now, { auto = false } = {}) {
       t.w = t.d = t.l = t.gf = t.ga = 0; t.grp = null; t.deduct = 0; t.rot = 0;
       if (user) t.manual = null;
     }
-    s.listings = []; s.offers = [];
+    s.listings = []; s.offers = []; s.neg = {};
     refreshMarket(s, rng);
   });
   s.season++;
@@ -614,3 +614,4 @@ export const dev = {
 export const teamCA = (t) => avg(t.players.map(caOf));
 
 export * from './market.js';
+export { factorsOf, factorMul, flexOf, stanceOf, PATIENCE, BREAK_ROUNDS } from './negotiate.js';

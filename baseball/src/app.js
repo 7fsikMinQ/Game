@@ -131,6 +131,7 @@ const M = (v) => fmtMoney(s.country, v);
 const player = (pid) => G.userTeam(s).players.find((p) => p.id === pid) || G.findPlayer(s, pid)?.p;
 const go = (tab, extra = {}) => { Object.assign(ui, extra, { tab }); closeSheet(); render(); window.scrollTo(0, 0); };
 
+function readCash() { const el = $('#tr-cash'); if (el && ui.trade) ui.trade.cash = Math.max(0, +el.value || 0); }
 function act(name, d) {
   const now = Date.now();
   switch (name) {
@@ -209,17 +210,31 @@ function act(name, d) {
     case 'draft-auto': G.withRng(s, (rng) => G.draftAuto(s, rng)); persist(); toast('지명을 마쳤습니다'); render(); break;
     case 'accept-offer': done(G.acceptOffer(s, +d.id), '트레이드가 성사되었습니다'); break;
     case 'reject-offer': s.offers = s.offers.filter((o) => o.id !== +d.id); persist(); render(); break;
-    case 'trade-open': ui.trade = { teamId: +d.tid, give: new Set(), get: new Set() }; ui.sheet = { type: 'trade' }; openSheet(tradeSheet(s, ui)); break;
+    case 'trade-open': ui.trade = { teamId: +d.tid, give: new Set(), get: new Set(), cash: 0, log: [] }; ui.sheet = { type: 'trade' }; openSheet(tradeSheet(s, ui)); break;
     case 'trade-with': { closeSheet(); go('market', { msub: 'trade' }); toast('시장 → 트레이드에서 상대 구단을 고르세요'); break; }
-    case 'trade-with-ai': ui.trade = { teamId: +d.tid, give: new Set(), get: new Set([+d.pid]) }; ui.sheet = { type: 'trade' }; openSheet(tradeSheet(s, ui)); break;
+    case 'trade-with-ai': ui.trade = { teamId: +d.tid, give: new Set(), get: new Set([+d.pid]), cash: 0, log: [] }; ui.sheet = { type: 'trade' }; openSheet(tradeSheet(s, ui)); break;
     case 'trade-toggle': {
+      readCash();
       const set = d.side === 'give' ? ui.trade.give : ui.trade.get;
       const id = +d.pid;
       if (set.has(id)) set.delete(id); else if (set.size < 3) set.add(id); else toast('최대 3명까지입니다');
       openSheet(tradeSheet(s, ui), true);
       break;
     }
-    case 'trade-go': { const r = G.trade(s, ui.trade.teamId, [...ui.trade.give], [...ui.trade.get]); if (r.ok) { closeSheet(); persist(); toast('트레이드가 성사되었습니다'); render(); } else { toast(errText(r)); openSheet(tradeSheet(s, ui), true); } break; }
+    case 'trade-go': {
+      const tr = ui.trade; readCash();
+      const r = G.propose(s, tr.teamId, [...tr.give], [...tr.get], tr.cash);
+      if (!r.ok) { toast(errText(r)); openSheet(tradeSheet(s, ui), true); break; }
+      const who = s.teams[tr.teamId].short;
+      tr.log = tr.log || [];
+      tr.log.unshift({ cls: 'mine', text: `제안${tr.cash ? ` (현금 ${M(tr.cash)} 포함)` : ''}` });
+      if (r.status === 'accepted') { closeSheet(); persist(); toast('트레이드가 성사되었습니다'); render(); break; }
+      if (r.status === 'counter') { tr.cash = r.cash; tr.log.unshift({ text: `${who}: 현금 ${M(r.cash)}을 포함하면 하겠습니다. (금액을 채워 두었습니다)` }); }
+      else if (r.status === 'broken') tr.log.unshift({ text: `${who}: 협상을 중단하겠습니다. ${r.left}일 뒤에 다시 이야기합시다.` });
+      else tr.log.unshift({ text: `${who}: 가치 차이가 너무 큽니다. 선수 구성을 바꿔 보세요.` });
+      persist(); openSheet(tradeSheet(s, ui), true);
+      break;
+    }
     // 개발자 메뉴
     case 'dev-scale': G.dev.setScale(s, +d.x, now); persist(); openSheet(devSheet(s)); break;
     case 'dev-money': G.dev.addMoney(s, +d.v); persist(); toast(`자금 +${M(+d.v)}`); render(); break;

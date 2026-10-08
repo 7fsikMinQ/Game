@@ -24,7 +24,7 @@ const mentLabel = Object.fromEntries(MENTALITY);
 const pressLabel = Object.fromEntries(PRESSING);
 const pct = (x) => Math.round(x * 100);
 const money = fmtMoney;
-const ERR = { window: '이적시장이 닫혀 있습니다', money: '자금이 부족합니다', full: '선수단이 가득 찼습니다', min: '선수단 최소 인원(18명) 아래로 줄일 수 없습니다', gk: '골키퍼는 최소 2명이 필요합니다', limit: '임대 인원 한도에 도달했습니다', locked: '영입한 지 얼마 안 된 선수는 19라운드 동안 팔 수 없습니다', loaned: '임대 중인 선수입니다', notfound: '대상을 찾을 수 없습니다', max: '최대 레벨입니다' };
+const ERR = { window: '이적시장이 닫혀 있습니다', money: '자금이 부족합니다', full: '선수단이 가득 찼습니다', min: '선수단 최소 인원(18명) 아래로 줄일 수 없습니다', gk: '골키퍼는 최소 2명이 필요합니다', limit: '임대 인원 한도에 도달했습니다', locked: '영입한 지 얼마 안 된 선수는 19라운드 동안 팔 수 없습니다', loaned: '임대 중인 선수입니다', notfound: '대상을 찾을 수 없습니다', bid: '금액을 입력하세요', max: '최대 레벨입니다' };
 export const errText = (r) => ERR[r.err] || '할 수 없습니다';
 
 // ───────── 시작 화면 ─────────
@@ -193,6 +193,7 @@ export function playerSheet(s, pid, src = 'own') {
     if (expiring) bs.push(`<button class="btn" data-act="renew" data-pid="${p.id}">재계약 (보너스 ${money(G.renewBonus(p))}, 연봉 ${money(G.wageDemand(p))})</button>`);
     if (loanedIn) bs.push(`<button class="btn" data-act="buy-option" data-pid="${p.id}">완전 영입 ${money(p.loan.opt)}</button>`);
     else {
+      bs.push(`<button class="btn" data-act="neg-open" data-mode="sell" data-pid="${p.id}">가격 협상하며 팔기</button>`);
       bs.push(`<button class="btn ghost danger" data-act="sell" data-pid="${p.id}">즉시 매각 ${money(G.sellPrice(p))}</button>`);
       bs.push(`<button class="btn ghost" data-act="${listed ? 'unlist' : 'list'}" data-pid="${p.id}">${listed ? '이적 등록 취소' : '이적 등록 (제안 기다리기)'}</button>`);
       if (!p.loan) bs.push(`<button class="btn ghost" data-act="loan-out" data-pid="${p.id}">임대 보내기 (임대료 ${money(Math.round(valueOf(p) * 0.04 / 100) * 100)})</button>`);
@@ -200,7 +201,7 @@ export function playerSheet(s, pid, src = 'own') {
     }
     bs.push('<button class="btn" data-act="close">닫기</button>');
     act = bs.join('');
-  } else if (src === 'market') act = `<button class="btn" data-act="buy" data-pid="${p.id}">영입 ${money(G.askPrice(p))}</button><button class="btn ghost" data-act="close">닫기</button>`;
+  } else if (src === 'market') { const q = G.quoteOf(s, p.id); act = `<button class="btn" data-act="neg-open" data-mode="buy" data-pid="${p.id}">협상하기</button><button class="btn ghost" data-act="buy" data-pid="${p.id}">즉시 구매 ${money(q ? q.ask : G.askPrice(p))}</button><button class="btn ghost" data-act="close">닫기</button>`; }
   else if (src === 'loan') act = `<button class="btn" data-act="loan-in" data-pid="${p.id}">임대 영입 (임대료 ${money(G.loanFee(p))} + 연봉 부담)</button><button class="btn ghost" data-act="close">닫기</button>`;
   else if (src === 'free') act = `<button class="btn" data-act="sign" data-pid="${p.id}">자유계약 ${money(G.freePrice(p))}</button><button class="btn ghost" data-act="close">닫기</button>`;
   else if (src === 'youth') act = `<button class="btn" data-act="youth-yes" data-pid="${p.id}">영입</button><button class="btn ghost" data-act="youth-no" data-pid="${p.id}">돌려보내기</button>`;
@@ -212,7 +213,37 @@ export function playerSheet(s, pid, src = 'own') {
   ${x && x.app ? `<p class="meta">시즌 기록: ${x.app}경기 ${x.g}골 ${x.a}도움 · 평균 평점 ${f1(x.rt / x.app)}</p>` : ''}
   <h3>포지션 적합도</h3><div class="chips">${roles.map((o) => `<span class="chip">${o.r} <b>${o.v}</b></span>`).join('')}</div>
   <h3>능력치 <small class="mute" style="display:inline">1~20</small></h3><div class="attrs">${attrs}</div>
-  ${wnote}<div class="actions col">${act}</div>`;
+  ${factorLine(p)}${wnote}<div class="actions col">${act}</div>`;
+}
+
+const factorLine = (p) => { const f = G.factorsOf(p); return f.length ? `<div class="factors"><span class="mute small">몸값 요인</span>${f.map((x) => `<span class="chip">${esc(x.label)} ${x.mul >= 1 ? '+' : ''}${Math.round((x.mul - 1) * 100)}%</span>`).join('')}</div>` : ''; };
+
+// ───────── 이적 협상 시트 ─────────
+export function negSheet(s, ui) {
+  const n = ui.neg, p = G.findPlayer(s, n.pid);
+  if (!p) return '<p class="empty">대상을 찾을 수 없습니다.</p><div class="actions"><button class="btn" data-act="close">닫기</button></div>';
+  const buy = n.mode === 'buy';
+  let info;
+  if (buy) {
+    const q = G.quoteOf(s, p.id), t = q && q.t;
+    info = q ? `<div class="kv"><span>판매 구단</span><b>${esc(t.name)}</b></div><div class="kv"><span>호가</span><b>${money(q.ask)}</b></div><div class="kv"><span>기준 시장가치</span><b>${money(valueOf(p))}</b></div>${q.star ? '<p class="mute small">구단의 핵심 선수라 쉽게 깎아 주지 않습니다.</p>' : ''}` : '';
+  } else {
+    const b = G.sellBand(s, p);
+    info = `<div class="kv"><span>관심 구단</span><b>${esc(b.buyer)}</b></div><div class="kv"><span>기준 시장가치</span><b>${money(G.tradeValue(p))}</b></div><p class="mute small">상대가 내줄 수 있는 선은 비공개입니다. 높게 부를수록 거절될 수 있고, 무리하면 협상이 깨집니다.</p>`;
+  }
+  const pat = G.negOf(s, p.id);
+  const broken = pat.until && s.tick < pat.until;
+  const left = Math.max(0, pat.pat);
+  const dflt = n.input ?? Math.round((buy ? G.askPrice(p) * 0.85 : G.sellPrice(p) * 1.15) / 100) * 100;
+  const log = n.log.map((l) => `<li class="${l.cls || ''}">${esc(l.text)}</li>`).join('');
+  return `<header class="sheet-h">${avatar(p)}<div class="grow"><h2>${esc(p.name)}</h2><span class="mute">${buy ? '영입 협상' : '매각 협상'} · CA ${caOf(p)} · ${p.age}세</span></div></header>
+  <div class="card">${info}${factorLine(p)}</div>
+  ${log ? `<ul class="list tight neglog">${log}</ul>` : ''}
+  ${!G.windowInfo(s).open ? '<div class="card alert"><b>이적시장이 닫혀 있습니다</b><small>시장이 열리면 협상할 수 있습니다.</small></div>' : broken ? `<div class="card alert"><b>협상이 결렬되었습니다</b><small>${pat.until - s.tick}라운드 뒤에 다시 시도할 수 있습니다.</small></div>` : `
+  <label class="field"><span>${buy ? '제시할 이적료' : '요구할 이적료'} (만)</span><input id="neg-in" type="number" inputmode="numeric" step="100" min="100" value="${dflt}" style="width:100%;font-size:16px"></label>
+  <p class="mute small">남은 협상 기회 ${left}번</p>
+  <div class="actions col"><button class="btn" data-act="neg-bid">${buy ? '입찰하기' : '이 가격에 팔기'}</button>${n.counter ? `<button class="btn ghost" data-act="neg-take" >역제안 수락 ${money(n.counter)}</button>` : ''}</div>`}
+  <div class="actions"><button class="btn ghost" data-act="close">닫기</button></div>`;
 }
 
 // ───────── 전술 탭 ─────────

@@ -69,6 +69,19 @@ try {
     await page.click('[data-tab="club"]');
     await page.click('[data-act="cseg"][data-v="market"]');
     await page.screenshot({ path: path.join(shots, `sc-${scheme}-7-market.png`), fullPage: true });
+    if (await page.locator('[data-act="player"][data-src="market"]').count()) {
+      await page.locator('[data-act="player"][data-src="market"]').first().click();
+      await page.click('.sheet [data-act="neg-open"]');
+      await page.waitForSelector('.sheet .neglog, .sheet [data-act="neg-bid"], .sheet .alert');
+      if (await page.locator('#neg-in').count()) {
+        await page.fill('#neg-in', '100');
+        await page.click('.sheet [data-act="neg-bid"]');
+        ok((await page.textContent('.sheet')).includes('판매 구단:'), `[${scheme}] 낮은 입찰에는 구단이 답한다`);
+      } else ok((await page.textContent('.sheet')).includes('이적시장이 닫혀'), `[${scheme}] 시장이 닫혀 있으면 협상 시트가 안내한다`);
+      await page.screenshot({ path: path.join(shots, `sc-${scheme}-7b-negotiate.png`) });
+      ok(await page.evaluate(() => document.querySelector('#sheetbody').scrollWidth <= document.querySelector('#sheetbody').clientWidth + 1), `[${scheme}] 협상 시트가 가로로 넘치지 않는다`);
+      await page.click('.sheet [data-act="close"]');
+    }
 
     for (let i = 0; i < 7; i++) await page.click('#brand');
     ok(await page.locator('.sheet').isVisible(), `[${scheme}] 제목 7번 탭하면 개발자 메뉴가 열린다`);

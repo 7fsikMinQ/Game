@@ -12,11 +12,12 @@ test('이적: 이적시장이 열려 있으면 영입되고, 상대 구단은 �
   assert.ok(G.windowInfo(s).open);
   const { p, t } = G.marketPlayers(s)[0];
   const before = { me: G.userTeam(s).players.length, other: t.players.length, money: s.money };
+  const ask = G.quoteOf(s, p.id).ask;
   const r = G.buyPlayer(s, p.id);
   assert.ok(r.ok);
   assert.equal(G.userTeam(s).players.length, before.me + 1);
   assert.equal(t.players.length, before.other);
-  assert.equal(s.money, before.money - G.askPrice(p));
+  assert.equal(s.money, before.money - ask);
   assert.equal(p.ctr, 4); assert.ok(p.fee > 0); assert.ok(G.userTeam(s).players.includes(p));
   assert.ok(!t.players.includes(p));
   assert.ok(s.news.some((n) => n.kind === 'transfer'));
@@ -298,11 +299,11 @@ test('영입가보다 비싸게 팔 수 없다: 이적 등록 호가 상한, 제
   const s = fresh();
   const p = G.userTeam(s).players.find((x) => x.pos === 'ST');
   G.listPlayer(s, p.id, G.valueOf(p) * 5);
-  assert.ok(s.listings[0].ask <= Math.round(G.valueOf(p) * 1.15 / 100) * 100);
+  assert.ok(s.listings[0].ask <= Math.round(G.valueOf(p) * G.factorMul(p) * 1.15 / 100) * 100);
   let max = 0;
-  for (let i = 0; i < 40; i++) { s.offers = []; G.processOffers(s, { chance: () => true, next: () => Math.random(), pick: (a) => a[0] }); for (const o of s.offers) if (o.pid === p.id) max = Math.max(max, o.fee / G.valueOf(p)); }
+  for (let i = 0; i < 40; i++) { s.offers = []; G.processOffers(s, { chance: () => true, next: () => Math.random(), pick: (a) => a[0] }); for (const o of s.offers) if (o.pid === p.id) max = Math.max(max, o.fee / (G.valueOf(p) * G.factorMul(p))); }
   assert.ok(max > 0 && max <= 1.16, `최대 제안 ${max.toFixed(3)}배`);
-  assert.ok(G.askPrice(p) / G.valueOf(p) >= 1.19, '영입가는 가치의 1.2배');
+  assert.ok(G.askPrice(p) / (G.valueOf(p) * G.factorMul(p)) >= 1.19, '영입 기준 호가는 (활약 보정된) 가치의 1.2배');
 });
 
 test('자유계약으로 데려온 선수는 되팔아도 차익이 거의 없다 (가치의 25%만 인정)', () => {

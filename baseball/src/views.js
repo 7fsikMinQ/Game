@@ -20,7 +20,7 @@ export const navHTML = (tab, badge = 0) =>
 const ERR = {
   window: '지금은 트레이드할 수 없습니다 (마감 이후)', money: '자금이 부족합니다', full: '선수단이 가득 찼습니다', min: '선수단 최소 인원 아래로 줄일 수 없습니다',
   locked: '영입·교환한 지 얼마 안 된 선수는 잠시 거래할 수 없습니다', foreign: '외국인 선수 보유 한도를 넘습니다', notfound: '대상을 찾을 수 없습니다', max: '최대 레벨입니다',
-  value: '상대 구단이 가치가 부족하다고 봅니다', rosterAI: '상대 구단의 선수단 인원 한도를 넘습니다', payAI: '상대 구단이 연봉 부담을 못 받아들입니다', empty: '교환할 선수를 양쪽에서 고르세요',
+  value: '상대 구단이 가치가 부족하다고 봅니다', bid: '금액을 확인하세요', rosterAI: '상대 구단의 선수단 인원 한도를 넘습니다', payAI: '상대 구단이 연봉 부담을 못 받아들입니다', empty: '교환할 선수를 양쪽에서 고르세요',
   toomany: '한 번에 최대 3명까지입니다', injured: '부상 중인 선수는 1군에 올릴 수 없습니다', phase: '지금은 할 수 없습니다', turn: '아직 내 지명 차례가 아닙니다',
 };
 export const errText = (r) => ERR[r.err] || '할 수 없습니다';
@@ -332,19 +332,26 @@ export function marketView(s, ui) {
 }
 const me2 = (s, pid) => { for (const t of s.teams) { const p = t.players.find((x) => x.id === pid); if (p) return p; } return null; };
 
+const formChips = (p) => { const f = G.valueFactors(p); return f.length ? ` <span class="st ${f[0].mul >= 1 ? 'good' : 'warn'}" title="${esc(f.map((x) => x.label).join(', '))}">${f[0].mul >= 1 ? '▲' : '▼'}${Math.round(Math.abs(f[0].mul - 1) * 100)}%</span>` : ''; };
 export function tradeSheet(s, ui) {
   const tr = ui.trade;
   const ai = s.teams[tr.teamId], me = G.userTeam(s);
-  const chk = tr.give.size && tr.get.size ? G.tradeCheck(s, ai.id, [...tr.give], [...tr.get]) : null;
-  const li = (p, set, side) => `<li><button class="rowbtn${set.has(p.id) ? ' sel' : ''}" data-act="trade-toggle" data-side="${side}" data-pid="${p.id}"><span class="pos ${grp(p.pos)}">${p.pos}</span><span class="grow">${esc(p.name)}<small>${p.age}세 · ${m(s, p.sal)}/${p.yrs}년${G.lockLeft(s, p) ? ` · 거래제한 ${G.lockLeft(s, p)}일` : ''}</small></span><span class="ca"><b>${G.ovrOf(p)}</b><i>/${G.potEstimate(s, p).mid}</i></span></button></li>`;
+  const cash = Math.max(0, +tr.cash || 0);
+  const chk = tr.give.size && tr.get.size ? G.tradeCheck(s, ai.id, [...tr.give], [...tr.get], cash) : null;
+  const n = G.negOf(s, ai.id);
+  const broken = n.until && G.dayOf(s) < n.until;
+  const li = (p, set, side) => `<li><button class="rowbtn${set.has(p.id) ? ' sel' : ''}" data-act="trade-toggle" data-side="${side}" data-pid="${p.id}"><span class="pos ${grp(p.pos)}">${p.pos}</span><span class="grow">${esc(p.name)}${formChips(p)}<small>${p.age}세 · ${m(s, p.sal)}/${p.yrs}년${G.lockLeft(s, p) ? ` · 거래제한 ${G.lockLeft(s, p)}일` : ''}</small></span><span class="ca"><b>${G.ovrOf(p)}</b><i>/${G.potEstimate(s, p).mid}</i></span></button></li>`;
   const mine = me.players.slice().sort((a, b) => G.tradeValue(G.Lof(s), b) - G.tradeValue(G.Lof(s), a));
   const theirs = ai.players.slice().sort((a, b) => G.tradeValue(G.Lof(s), b) - G.tradeValue(G.Lof(s), a));
-  const msg = !chk ? '양쪽에서 선수를 고르세요 (최대 3명씩)' : chk.ok ? `성사 가능 · 상대가 보는 가치 ${f1(chk.ratio)}배` : `${errText(chk)}${chk.ratio ? ` (가치 ${f1(chk.ratio)}배, 필요 1.1배)` : ''}`;
+  const msg = !chk ? '양쪽에서 선수를 고르세요 (최대 3명씩)' : chk.ok ? `성사될 것 같습니다 · 상대가 보는 가치 ${f1(chk.ratio)}배` : chk.err === 'value' ? `아직 부족합니다 · 상대가 보는 가치 ${f1(chk.ratio)}배` : errText(chk);
+  const log = (tr.log || []).map((l) => `<li class="${l.cls || ''}">${esc(l.text)}</li>`).join('');
   return `<header class="sheet-h"><div><h2>${esc(ai.name)}</h2><span class="mute">트레이드 협상</span></div></header>
-  <div class="card ${chk && chk.ok ? 'good' : ''}"><b>${msg}</b></div>
+  <div class="card ${chk && chk.ok ? 'good' : ''}"><b>${msg}</b><small>활약·부상 상태에 따라 선수 가치가 오르내립니다 (▲▼). 구단마다 요구하는 수준이 다릅니다. 부족하면 현금을 보태거나 역제안을 받을 수 있습니다.</small></div>
+  ${log ? `<ul class="list tight neglog">${log}</ul>` : ''}
+  ${broken ? `<div class="card alert"><b>협상이 중단되었습니다</b><small>${n.until - G.dayOf(s)}일 뒤에 다시 시도할 수 있습니다.</small></div>` : `<label class="field"><span>현금 보태기 (${s.country === 'kbo' ? '억 원' : '백만 달러'})</span><input id="tr-cash" type="number" inputmode="decimal" step="${s.country === 'kbo' ? 1 : 0.5}" min="0" value="${cash || ''}" placeholder="0" style="width:100%;font-size:16px"></label><p class="mute small">남은 협상 기회 ${Math.max(0, n.pat)}번</p>`}
   <h3>내가 보낼 선수 (${tr.give.size})</h3><ul class="list roster tight">${mine.slice(0, 40).map((p) => li(p, tr.give, 'give')).join('')}</ul>
   <h3>받을 선수 (${tr.get.size})</h3><ul class="list roster tight">${theirs.slice(0, 40).map((p) => li(p, tr.get, 'get')).join('')}</ul>
-  <div class="actions"><button class="btn" data-act="trade-go" ${chk && chk.ok ? '' : 'disabled'}>트레이드 제안</button><button class="btn ghost" data-act="close">닫기</button></div>`;
+  <div class="actions"><button class="btn" data-act="trade-go" ${chk && !broken && chk.err !== 'window' ? '' : 'disabled'}>제안하기</button><button class="btn ghost" data-act="close">닫기</button></div>`;
 }
 
 // ───────── 구단 탭 ─────────

@@ -1,7 +1,7 @@
 import * as G from './game.js';
 import { createStore, exportText, importText } from './storage.js';
 import { parsePackText, applyPack } from './pack.js';
-import { displayState, importSheet, csvTemplate, navHTML, homeView, squadView, tacticsView, leagueView, clubView, playerSheet, slotPicker, backupSheet, devSheet, leagueSelectView, clubSelectView, eventLine, errText, badgeCount } from './views.js';
+import { displayState, importSheet, csvTemplate, negSheet, navHTML, homeView, squadView, tacticsView, leagueView, clubView, playerSheet, slotPicker, backupSheet, devSheet, leagueSelectView, clubSelectView, eventLine, errText, badgeCount } from './views.js';
 import { fmtClock, fmtMoney } from './util.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -40,7 +40,17 @@ function render() {
 }
 function openSheet(html) { $('#sheetbody').innerHTML = html; $('#sheet').hidden = false; document.body.classList.add('noscroll'); }
 function closeSheet() { $('#sheet').hidden = true; document.body.classList.remove('noscroll'); ui.sheet = null; }
+function showNeg() { $('#sheetbody').innerHTML = negSheet(s, ui); }
+function negReply(r, bid) {
+  const n = ui.neg, M2 = (v) => fmtMoney(v);
+  n.log.unshift({ cls: 'mine', text: `${n.mode === 'buy' ? '제시' : '요구'}: ${M2(bid)}` });
+  const side = n.mode === 'buy' ? '판매 구단' : r.buyer || '상대 구단';
+  if (r.status === 'counter') { n.counter = r.counter; n.input = r.counter; n.log.unshift({ text: `${side}: ${M2(r.counter)}이면 하겠습니다.` }); }
+  else if (r.status === 'rejected') n.log.unshift({ text: `${side}: 너무 차이가 큽니다. 다시 생각해 보세요.` });
+  else if (r.status === 'broken') n.log.unshift({ text: `${side}: 협상을 중단하겠습니다. ${r.left}라운드 뒤에 다시 이야기합시다.` });
+}
 function refreshSheet() {
+  if (ui.sheet?.type === 'neg' && ui.neg) { showNeg(); return; }
   if (ui.sheet?.type === 'player') { const h = playerSheet(s, ui.sheet.pid, ui.sheet.src); if (h) $('#sheetbody').innerHTML = h; else closeSheet(); }
 }
 let toastTimer;
@@ -197,6 +207,22 @@ function act(name, d) {
       if (window.confirm('모든 진행 상황이 사라집니다. 새로 시작할까요?')) { stopLive(); store.clear(); s = null; ui.setup = 'league'; ui.report = null; ui.tab = 'home'; closeSheet(); render(); }
       break;
     // 선수 거래
+    case 'neg-open': ui.neg = { pid: +d.pid, mode: d.mode, log: [], counter: 0, input: null }; ui.sheet = { type: 'neg' }; openSheet(negSheet(s, ui)); break;
+    case 'neg-bid': {
+      const n = ui.neg; if (!n) break;
+      const bid = Math.round((+$('#neg-in').value || 0) / 100) * 100;
+      n.input = bid;
+      const r = n.mode === 'buy' ? G.bidPlayer(s, n.pid, bid) : G.askForPlayer(s, n.pid, bid);
+      if (!r.ok) { toast(errText(r)); break; }
+      if (r.status === 'accepted') { persist(); toast(n.mode === 'buy' ? `${fmtMoney(r.price)}에 영입했습니다` : `${fmtMoney(r.price)}에 매각했습니다`); closeSheet(); render(); break; }
+      negReply(r, bid); persist(); showNeg();
+      break;
+    }
+    case 'neg-take': {
+      const n = ui.neg; if (!n || !n.counter) break;
+      $('#neg-in').value = n.counter; act('neg-bid', {});
+      break;
+    }
     case 'buy': done(G.buyPlayer(s, +d.pid), '영입했습니다', closeSheet); break;
     case 'sign': done(G.signFree(s, +d.pid), '계약했습니다', closeSheet); break;
     case 'sell': { const p = G.findPlayer(s, +d.pid); if (p && window.confirm(`${p.name} 선수를 ${M(G.sellPrice(p))}에 매각할까요?`)) done(G.sellPlayer(s, +d.pid), '매각했습니다', closeSheet); break; }

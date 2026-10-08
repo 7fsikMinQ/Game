@@ -3,21 +3,24 @@ import { SQUAD_PLAN, SQUAD_MIN, SQUAD_MAX } from './data.js';
 import { windowState } from './league.js';
 import { genPlayer, caOf, valueOf, wageOf } from './player.js';
 import { clamp, fmtMoney } from './util.js';
+import { factorMul, quoteBuy, buyerFor, judgeBid, judgeAsk, resetNeg, negOf } from './negotiate.js';
 import { userTeam, userDiv, rulesOf, withRng, ctxOf, addNews } from './core.js';
 
 export const windowInfo = (s) => { const d = userDiv(s); return windowState(rulesOf(s), s.phase, d.roundIdx, d.rounds.length); };
 const r100 = (x) => Math.round(x / 100) * 100;
-export const askPrice = (p) => r100(valueOf(p) * 1.2);
+export const askPrice = (p) => r100(valueOf(p) * 1.2 * factorMul(p)); // 기준 호가 (구단 성향 제외)
 export const freePrice = (p) => r100(wageOf(p) * 0.2); // 자유계약: 계약 보너스만
 // 이적료 없이 공짜로 데려온 선수(자유계약)는 팔 때도 가치의 25%만 쳐준다 (공짜로 데려와 비싸게 파는 차익 방지)
 export const freeSigned = (p) => p.acq != null && !p.fee && !p.loan;
-export const tradeValue = (p) => valueOf(p) * (freeSigned(p) ? 0.25 : 1);
+export const tradeValue = (p) => valueOf(p) * (freeSigned(p) ? 0.25 : 1) * factorMul(p);
+const tradeValueBase = (p) => valueOf(p) * (freeSigned(p) ? 0.25 : 1); // 활약 보정은 buyerFor가 한다
 export const sellPrice = (p) => r100(tradeValue(p) * 0.85);
 export const loanFee = (p) => r100(valueOf(p) * 0.06);
 export const optionPrice = (p) => r100(valueOf(p) * 1.1);
 // 영입한 선수는 19라운드 동안 팔 수 없다(영입→즉시 매각으로 돈 버는 것을 막는다)
 export const LOCK_ROUNDS = 19;
 export const absRound = (s) => (s.season - 1) * 60 + (s.tick || 0);
+export { negOf };
 export const lockLeft = (s, p) => (p.acq == null ? 0 : Math.max(0, LOCK_ROUNDS - (absRound(s) - p.acq)));
 export const releaseCost = (p) => (p.ctr > 0 ? r100(p.w * Math.min(p.ctr, 3) * 0.4) : 0);
 
@@ -57,13 +60,16 @@ function canLeave(s, p) {
 const needWindow = (s) => (windowInfo(s).open ? null : 'window');
 
 // ───────── 영입 / 매각 ─────────
-export function buyPlayer(s, pid) {
+export const quoteOf = (s, pid) => { const hit = marketPlayers(s).find((x) => x.p.id === pid); return hit ? { ...quoteBuy(hit.t, hit.p), p: hit.p, t: hit.t } : null; };
+
+// 즉시 구매는 호가 그대로. 협상(bidPlayer)으로 깎을 수 있다.
+export function buyPlayer(s, pid, agreed) {
   const e = needWindow(s);
   if (e) return { ok: false, err: e };
   const hit = marketPlayers(s).find((x) => x.p.id === pid);
   if (!hit) return { ok: false, err: 'notfound' };
   const me = userTeam(s);
-  const price = askPrice(hit.p);
+  const price = agreed ?? quoteBuy(hit.t, hit.p).ask;
   if (me.players.length >= SQUAD_MAX) return { ok: false, err: 'full' };
   if (s.money < price) return { ok: false, err: 'money', price };
   withRng(s, (rng) => {
@@ -75,8 +81,26 @@ export function buyPlayer(s, pid) {
   Object.assign(hit.p, { fee: price, cy: 4, ctr: 4, mor: 75, loan: null, w: wageOf(hit.p), acq: absRound(s) });
   me.players.push(hit.p);
   s.market.list = s.market.list.filter((id) => id !== pid);
+  resetNeg(s, pid);
   addNews(s, 'transfer', `${hit.p.name} 영입 (${hit.t.name}, 이적료 ${fmtMoney(price)})`);
   return { ok: true, price, p: hit.p };
+}
+
+// 입찰: 상대 구단이 수락 / 역제안 / 거절 / 협상 결렬로 답한다
+export function bidPlayer(s, pid, bid) {
+  const e = needWindow(s);
+  if (e) return { ok: false, err: e };
+  const q = quoteOf(s, pid);
+  if (!q) return { ok: false, err: 'notfound' };
+  bid = r100(+bid);
+  if (!(bid > 0)) return { ok: false, err: 'bid' };
+  const me = userTeam(s);
+  if (me.players.length >= SQUAD_MAX) return { ok: false, err: 'full' };
+  if (s.money < Math.min(bid, q.ask)) return { ok: false, err: 'money', price: bid };
+  const r = judgeBid(s, q, pid, bid);
+  if (r.status !== 'accepted') return { ok: true, ...r, ask: q.ask };
+  const done = buyPlayer(s, pid, bid);
+  return done.ok ? { ok: true, status: 'accepted', price: bid, p: done.p } : done;
 }
 
 export function signFree(s, pid) {
@@ -106,7 +130,7 @@ function sendToAI(s, p, rng, destTeam) {
 }
 const clearTrade = (s, pid) => { s.listings = s.listings.filter((l) => l.pid !== pid); s.offers = s.offers.filter((o) => o.pid !== pid); };
 
-export function sellPlayer(s, pid) {
+export function sellPlayer(s, pid, agreed) {
   const e = needWindow(s);
   if (e) return { ok: false, err: e };
   const me = userTeam(s);
@@ -116,16 +140,39 @@ export function sellPlayer(s, pid) {
   if (lockLeft(s, p) > 0) return { ok: false, err: 'locked', left: lockLeft(s, p) };
   const le = canLeave(s, p);
   if (le) return { ok: false, err: le };
-  const price = sellPrice(p);
+  const price = agreed ?? sellPrice(p);
   me.players.splice(me.players.indexOf(p), 1);
   me.manual = null;
   s.money += price;
   clearTrade(s, pid);
-  const dest = withRng(s, (rng) => sendToAI(s, p, rng));
+  resetNeg(s, pid);
+  const dest = agreed != null && s._buyer ? sendToAI(s, p, null, s._buyer) : withRng(s, (rng) => sendToAI(s, p, rng));
   p.fee = 0; p.cy = 0;
   addNews(s, 'transfer', `${p.name} 매각 (${dest.name}, ${fmtMoney(price)})`);
   return { ok: true, price };
 }
+
+// 가격 제시: 사려는 구단이 수락 / 역제안 / 거절 / 결렬로 답한다
+export function askForPlayer(s, pid, ask) {
+  const e = needWindow(s);
+  if (e) return { ok: false, err: e };
+  const p = userTeam(s).players.find((x) => x.id === pid);
+  if (!p) return { ok: false, err: 'notfound' };
+  if (p.loan && p.loan.from !== s.userId) return { ok: false, err: 'loaned' };
+  if (lockLeft(s, p) > 0) return { ok: false, err: 'locked', left: lockLeft(s, p) };
+  const le = canLeave(s, p);
+  if (le) return { ok: false, err: le };
+  ask = r100(+ask);
+  if (!(ask > 0)) return { ok: false, err: 'bid' };
+  const buyer = buyerFor(s, p, tradeValueBase(p));
+  const r = judgeAsk(s, buyer, pid, ask);
+  if (r.status !== 'accepted') return { ok: true, ...r, buyer: buyer.t.name };
+  s._buyer = buyer.t;
+  const done = sellPlayer(s, pid, ask);
+  delete s._buyer;
+  return done.ok ? { ok: true, status: 'accepted', price: ask, buyer: buyer.t.name } : done;
+}
+export const sellBand = (s, p) => { const b = buyerFor(s, p, tradeValueBase(p)); return { ceiling: b.ceiling, buyer: b.t.name }; };
 
 export function releasePlayer(s, pid) {
   const me = userTeam(s);

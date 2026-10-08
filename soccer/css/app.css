@@ -337,3 +337,8 @@ h3 + p { margin-bottom: 8px; }
 
 /* 한글은 단어 단위로 줄바꿈, 긴 영문·숫자는 넘치지 않게 */
 body { word-break: keep-all; overflow-wrap: break-word; }
+.neglog { margin: 8px 0; }
+.neglog li { padding: 8px 12px; font-size: 14px; }
+.neglog li.mine { text-align: right; color: var(--green); font-weight: 700; }
+.factors { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 2px; }
+.factors .chip { white-space: normal; }

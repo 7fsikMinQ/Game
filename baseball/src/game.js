@@ -339,7 +339,7 @@ function finishSeason(s, rng) {
   s.phase = 'offseason';
   s.nextGameAt = null;
   s.offseason = { expiring, draft: M.makeDraft(s, rng), notes: [], hist };
-  s.offers = [];
+  s.offers = []; s.neg = {};
 }
 
 // ───────── 시간 흐름 ─────────
@@ -516,7 +516,7 @@ export function startNextSeason(s, now, { auto = false, rng: rngIn = null } = {}
   s.phase = 'regular';
   s.playoff = null;
   s.offseason = null;
-  s.offers = [];
+  s.offers = []; s.neg = {};
   s.streak = [];
   s.regularRank = 0;
   s.nextGameAt = now + intervalMs(s);

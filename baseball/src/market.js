@@ -102,12 +102,31 @@ function contractValue(L, p) {
   const sur = (marketWage(L, ovrOf(p), p.age) - p.sal) * Math.min(Math.max(1, p.yrs), 3);
   return clamp((sur / L.wage.base) * 1.2, -6, 10);
 }
-export const tradeValue = (L, p) => Math.max(0.5, valueOf(p) + contractValue(L, p));
+// 올 시즌 활약·몸 상태가 트레이드 가치에 반영된다 (표본이 충분할 때만)
+export function valueFactors(p) {
+  const f = [], x = p.s;
+  if (x && p.role === 'H' && x.pa >= 80) {
+    const obp = (x.h + x.bb) / x.pa, slg = x.ab ? (x.h + x.d2 + 2 * x.d3 + 3 * x.hr) / x.ab : 0, ops = obp + slg;
+    const m = clamp(1 + (ops - 0.72) * 0.6, 0.88, 1.2);
+    if (Math.abs(m - 1) >= 0.02) f.push({ k: 'form', label: `${m > 1 ? '타격 호조' : '타격 부진'} (OPS ${ops.toFixed(3).replace(/^0/, '')})`, mul: m });
+  } else if (x && p.role === 'P' && x.outs >= 90) {
+    const era = (x.er * 27) / x.outs;
+    const m = clamp(1 + (4.3 - era) * 0.04, 0.88, 1.2);
+    if (Math.abs(m - 1) >= 0.02) f.push({ k: 'form', label: `${m > 1 ? '투구 호조' : '투구 부진'} (ERA ${era.toFixed(2)})`, mul: m });
+  }
+  if (p.inj > 0) f.push({ k: 'inj', label: `부상 ${Math.ceil(p.inj)}일`, mul: 1 - Math.min(0.3, 0.05 + p.inj * 0.01) });
+  else if (p.fat > 55) f.push({ k: 'fat', label: '피로 누적', mul: 0.97 });
+  return f;
+}
+export const formMul = (p) => valueFactors(p).reduce((a, f) => a * f.mul, 1);
+export const tradeValue = (L, p) => Math.max(0.5, valueOf(p) * formMul(p) + contractValue(L, p));
+const h01 = (a, b) => ((Math.imul(a + 1, 2654435761) ^ Math.imul(b + 7, 40503)) >>> 0) % 1000 / 1000;
+export const stingy = (teamId) => 1.04 + 0.12 * h01(teamId, 1); // 구단마다 요구하는 가치 비율 1.04~1.16
 function bundle(L, list) {
   const v = list.map((p) => tradeValue(L, p)).sort((a, b) => b - a);
   return v.reduce((a, x, i) => a + (i === 0 ? x : x * 0.6), 0);
 }
-export function tradeCheck(s, teamId, giveIds, getIds) {
+export function tradeCheck(s, teamId, giveIds, getIds, cash = 0) {
   const L = Lof(s);
   const me = userTeam(s), ai = s.teams[teamId];
   if (!ai || teamId === s.userId) return { ok: false, err: 'notfound' };
@@ -118,7 +137,7 @@ export function tradeCheck(s, teamId, giveIds, getIds) {
   if (!give.length || !get.length) return { ok: false, err: 'empty' };
   if (give.length > 3 || get.length > 3) return { ok: false, err: 'toomany' };
   if (give.some((p) => lockLeft(s, p) > 0)) return { ok: false, err: 'locked' };
-  const mine = bundle(L, give), theirs = bundle(L, get);
+  const mine = bundle(L, give) + cashValue(L, cash), theirs = bundle(L, get);
   const ratio = mine / Math.max(0.1, theirs);
   const meAfter = total(me) - give.length + get.length, aiAfter = total(ai) - get.length + give.length;
   if (meAfter > rosterMax(s)) return { ok: false, err: 'full', mine, theirs, ratio };
@@ -132,19 +151,51 @@ export function tradeCheck(s, teamId, giveIds, getIds) {
   }
   const aiPay = payroll(ai) - get.reduce((a, p) => a + p.sal, 0) + give.reduce((a, p) => a + p.sal, 0);
   if (aiPay > budgetOf(s, ai) * 1.25 && aiPay > payroll(ai)) return { ok: false, err: 'payAI', mine, theirs, ratio };
-  if (ratio < 1.1) return { ok: false, err: 'value', mine, theirs, ratio };
-  return { ok: true, mine, theirs, ratio, give, get };
+  const need = stingy(teamId);
+  if (cash > 0 && s.money < cash) return { ok: false, err: 'money', mine, theirs, ratio };
+  if (ratio < need) return { ok: false, err: 'value', mine, theirs, ratio, need };
+  return { ok: true, mine, theirs, ratio, need, give, get };
 }
-export function trade(s, teamId, giveIds, getIds) {
-  const r = tradeCheck(s, teamId, giveIds, getIds);
+export function trade(s, teamId, giveIds, getIds, cash = 0) {
+  const r = tradeCheck(s, teamId, giveIds, getIds, cash);
   if (!r.ok) return r;
+  s.money = r2(s.money - Math.max(0, cash));
   const me = userTeam(s), ai = s.teams[teamId];
   for (const p of r.give) { me.players.splice(me.players.indexOf(p), 1); p.act = 0; p.lock = dayOf(s) + 10; ai.players.push(p); }
   for (const p of r.get) { ai.players.splice(ai.players.indexOf(p), 1); p.act = 0; p.lock = dayOf(s) + 10; me.players.push(p); }
   autoRoster(ai, Lof(s));
   fixUser(s);
-  addNews(s, 'trade', `트레이드: ${r.give.map((p) => p.name).join(', ')} ↔ ${r.get.map((p) => p.name).join(', ')} (${ai.short})`);
+  addNews(s, 'trade', `트레이드: ${r.give.map((p) => p.name).join(', ')} ↔ ${r.get.map((p) => p.name).join(', ')} (${ai.short})${cash > 0 ? ` + 현금 ${fmtMoney(s.country, cash)}` : ''}`);
+  if (s.neg) delete s.neg[teamId];
   return { ok: true };
+}
+
+// ───────── 트레이드 협상 ─────────
+// 현금 보태기 단위: 가치 1점 = 연봉 기준액(L.wage.base)의 1/1.2
+const cashValue = (L, cash) => (cash > 0 ? (cash / L.wage.base) * 1.2 : 0);
+export const cashFor = (L, shortfall) => r2(Math.ceil(((shortfall / 1.2) * L.wage.base) * 100) / 100);
+export const NEG_PATIENCE = 3, NEG_BREAK_DAYS = 5;
+export function negOf(s, teamId) {
+  s.neg = s.neg || {};
+  const n = s.neg[teamId] || (s.neg[teamId] = { pat: NEG_PATIENCE, until: 0 });
+  if (n.until && dayOf(s) >= n.until) { n.pat = NEG_PATIENCE; n.until = 0; }
+  return n;
+}
+// 제안 → accepted(성사) / counter(현금을 더 달라) / rejected / broken(협상 중단)
+export function propose(s, teamId, giveIds, getIds, cash = 0) {
+  const L = Lof(s);
+  const n = negOf(s, teamId);
+  if (n.until && dayOf(s) < n.until) return { ok: true, status: 'broken', left: n.until - dayOf(s) };
+  const r = tradeCheck(s, teamId, giveIds, getIds, cash);
+  if (r.ok) { const done = trade(s, teamId, giveIds, getIds, cash); return done.ok ? { ok: true, status: 'accepted', ratio: r.ratio } : done; }
+  if (r.err !== 'value') return r;
+  const fail = () => { n.pat--; if (n.pat <= 0) { n.until = dayOf(s) + NEG_BREAK_DAYS; return { ok: true, status: 'broken', left: NEG_BREAK_DAYS }; } return null; };
+  const short = r.need * r.theirs - r.mine; // 부족한 가치
+  if (r.ratio >= r.need * 0.8) {
+    const add = cashFor(L, short + 0.05);
+    if (add <= s.money && add <= L.wage.base * 4) return fail() || { ok: true, status: 'counter', cash: Math.max(0, cash) + add, add, ratio: r.ratio, need: r.need };
+  }
+  return fail() || { ok: true, status: 'rejected', ratio: r.ratio, need: r.need };
 }
 
 // AI 구단이 먼저 제안하는 트레이드
