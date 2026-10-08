@@ -1,4 +1,8 @@
-# 새 게임 추가하기 (예: 축구)
+# 새 게임 추가하기
+
+> 축구(`soccer/`)는 이 문서의 방법(야구 폴더를 복사해서 시작)으로 만들었습니다. 체크리스트가 실제로 필요했습니다: 저장 키(`sc.save.*`), 캐시 이름(`soccer-v1`), 제목·매니페스트, 아이콘(`tools/make-icons.mjs`에 그림 추가), 루트 런처, `sw.js`의 `FILES` 목록(테스트 `pwa.test.mjs`가 빠진 파일을 잡아줍니다).
+
+(아래는 일반 안내입니다.)
 
 이 저장소는 **게임 하나 = 폴더 하나 = PWA 하나**입니다. 게임끼리 코드를 섞지 않고, 필요하면 나중에 공통 부분만 뽑습니다.
 
@@ -15,9 +19,9 @@ Remove-Item -Recurse soccer\test\*      # 테스트는 새 규칙에 맞춰 다�
 |---|---|---|
 | 1 | `soccer/manifest.webmanifest` | `name`, `short_name`, `description`, 색상 |
 | 2 | `soccer/index.html` | `<title>`, `apple-mobile-web-app-title`, 설명 |
-| 3 | `soccer/sw.js` | **`CACHE` 이름**(예: `soccer-v1`)과 `FILES` 목록 |
+| 3 | `soccer/sw.js` | **`CACHE` 이름**(예: `soccer-v1`)과 `FILES` 목록 (`test/pwa.test.mjs` 를 복사하면 빠진 파일을 자동으로 잡습니다) |
 | 4 | `soccer/src/storage.js` | **저장 키 접두사**(`bb.save.*` → `sc.save.*`)와 `FORMAT` 문자열 |
-| 5 | `soccer/icons/` | 아이콘 (`tools/make-icons.mjs` 를 복사해 `sample()` 함수의 그림만 바꾸면 됩니다) |
+| 5 | `soccer/icons/` | 아이콘 (`tools/make-icons.mjs` 의 `SETS` 에 그림 함수를 추가하고 `npm run icons`) |
 | 6 | `/index.html` (루트 런처) | 목록에 링크 추가, "준비 중" 항목 교체 |
 | 7 | `README.md` 표 | 새 게임 한 줄 추가 |
 

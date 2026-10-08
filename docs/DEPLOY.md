@@ -25,17 +25,17 @@ npm run site     # _site/ 폴더 생성 (index.html + 게임 폴더들, test 폴
 
 ## 1. GitHub Pages
 
-저장소에 `.github/workflows/pages.yml` 이 이미 들어 있습니다. 하는 일: `main` 브랜치에 푸시되면 ① 테스트 실행 ② 통과하면 배포.
+저장소에 `.github/workflows/pages.yml` 이 들어 있습니다. 하는 일: 푸시되면 ① 테스트 실행 ② 통과하면 배포. **`main`과 `claude/serene-franklin-tpdu4g` 둘 다에서** 돕니다(이 저장소의 기본 브랜치가 후자라서입니다. 이전에는 `main`에서만 돌도록 되어 있어 실행 기록이 0건이었습니다 — GitHub API로 확인).
 
-1. 작업 브랜치(`claude/serene-franklin-tpdu4g`)를 `main`에 합칩니다 (GitHub에서 Pull Request → Merge).
+1. 이 저장소는 **공개(public)** 라서 Pages가 무료입니다. 비공개로 바꾸면 유료 플랜이 필요합니다.
 2. 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 바꿉니다.
-3. **Actions** 탭에서 `Deploy to GitHub Pages` 가 초록색이 될 때까지 기다립니다 (1~2분). 처음이면 `Run workflow` 로 수동 실행해도 됩니다.
-4. 주소: `https://7fsikminq.github.io/Game/baseball/` (게임 목록: `https://7fsikminq.github.io/Game/`)
+3. **Actions** 탭에서 `Deploy to GitHub Pages` 를 **Run workflow**(브랜치 선택) 하거나 푸시합니다. 1~2분 뒤 초록색이 되면 완료.
+4. 주소: `https://7fsikminq.github.io/Game/` (게임: `/soccer/`, `/baseball/`)
 
 막힐 때:
-- Settings → Pages 메뉴가 없거나 "Upgrade" 가 보이면 비공개 저장소라서입니다. 저장소를 공개로 바꾸거나 Cloudflare Pages를 쓰세요.
-- 배포 단계에서 `Branch ... is not allowed to deploy to github-pages` 가 나오면 main이 아닌 브랜치에서 돌린 것입니다. main에서 실행하세요.
-- 공개 저장소가 되면 **코드가 누구에게나 보입니다.** (세이브 데이터는 기기 안에만 있어서 공개되지 않습니다.)
+- `Get Pages site failed` → 2번을 한 뒤 **Re-run all jobs**.
+- `Branch ... is not allowed to deploy to github-pages` → 환경 보호 규칙은 기본 브랜치만 허용합니다. 기본 브랜치에서 실행하거나 Settings → Environments → github-pages 에서 브랜치를 허용하세요.
+- 공개 저장소이므로 **코드는 누구에게나 보입니다.** 세이브/데이터 팩은 기기 안에만 있어 공개되지 않습니다. 실제 선수 이름을 쓰려면 저장소에 넣지 말고 [실제 데이터 가져오기](soccer/REAL-DATA.md)로 폰에서만 쓰세요.
 
 ## 2. Cloudflare Pages (비공개 저장소도 가능)
 

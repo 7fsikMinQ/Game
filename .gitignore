@@ -3,3 +3,4 @@ node_modules/
 *.log
 tools/.shots/
 _site/
+private/

@@ -1,9 +1,10 @@
-# main 브랜치에 푸시되면 GitHub Pages로 배포한다. (설정: Settings > Pages > Source = GitHub Actions)
+# 푸시되면 테스트 후 GitHub Pages로 배포한다. (설정: Settings > Pages > Source = GitHub Actions)
+# 이 저장소의 기본(default) 브랜치는 main 이 아니라 claude/serene-franklin-tpdu4g 라서 둘 다 적어 둔다.
 # manifest.webmanifest가 있는 폴더를 "게임"으로 보고 자동으로 포함한다. test/ 폴더는 뺀다.
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main, claude/serene-franklin-tpdu4g]
   workflow_dispatch:
 permissions:
   contents: read

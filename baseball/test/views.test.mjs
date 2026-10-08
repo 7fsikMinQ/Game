@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newGame, advance, dev, userTeam, startNextSeason } from '../src/game.js';
+import { newGame, advance, dev, userTeam } from '../src/game.js';
 import { homeView, rosterView, tableView, clubView, playerSheet, backupSheet, devSheet, boardFromPlays, boardHTML, navHTML, TABS } from '../src/views.js';
 import { fmtMoney, fmtAvg, fmtIP, fmtEra, fmtClock, esc } from '../src/util.js';
 

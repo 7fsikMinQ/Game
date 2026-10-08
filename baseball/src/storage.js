@@ -57,7 +57,7 @@ export function createStore(storage) {
     clear() {
       try {
         KEYS.forEach((k) => storage.removeItem(k));
-      } catch {}
+      } catch { /* 지울 수 없어도 무시 */ }
       seq = 0;
     },
   };

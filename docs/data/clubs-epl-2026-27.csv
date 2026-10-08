@@ -1,0 +1,35 @@
+country,division,club,rank,note
+epl,1,Arsenal,1,2025-26 우승(승점 85)
+epl,1,Manchester City,2,2025-26 2위(78)
+epl,1,Manchester United,3,2025-26 3위(71)
+epl,1,Aston Villa,4,2025-26 4위(65)
+epl,1,Liverpool,5,2025-26 5위(60)
+epl,1,Bournemouth,6,2025-26 6위(57)
+epl,1,Sunderland,7,2025-26 7위(54)
+epl,1,Brighton,8,2025-26 8위(53)
+epl,1,Brentford,,52~53점대(정확한 순위 미확인)
+epl,1,Chelsea,,52~53점대(정확한 순위 미확인)
+epl,1,Fulham,,52~53점대(정확한 순위 미확인)
+epl,1,Crystal Palace,,순위 미확인
+epl,1,Everton,,순위 미확인
+epl,1,Leeds United,,순위 미확인
+epl,1,Newcastle United,,순위 미확인
+epl,1,Nottingham Forest,,순위 미확인
+epl,1,Tottenham Hotspur,,검색에서 소거법으로 추정(직접 확인 못 함)
+epl,1,Coventry City,18,2026/27 승격
+epl,1,Ipswich Town,19,2026/27 승격
+epl,1,Hull City,20,2026/27 승격(플레이오프)
+epl,2,Wolverhampton Wanderers,1,2025-26 강등(꼴찌)
+epl,2,Burnley,2,2025-26 강등
+epl,2,West Ham United,3,2025-26 강등
+epl,2,Lincoln City,,2026/27 승격(리그원 1위)
+epl,2,Cardiff City,,2026/27 승격(리그원 2위)
+epl,2,Bolton Wanderers,,2026/27 승격(플레이오프)
+epl,2,Birmingham City,,
+epl,2,Blackburn Rovers,,
+epl,2,Bristol City,,
+epl,2,Charlton Athletic,,
+epl,2,Derby County,,
+epl,2,Middlesbrough,,
+epl,2,Millwall,,
+epl,2,Swansea City,,

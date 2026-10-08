@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRng } from '../src/rng.js';
 import { makeSchedule } from '../src/league.js';
 import { newGame, advance, standings, startNextSeason, intervalMs, MAX_CATCHUP, userTeam, dev, USER_ID } from '../src/game.js';
 
