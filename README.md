@@ -6,7 +6,7 @@
 | 폴더 | 게임 | 상태 |
 |---|---|---|
 | [`soccer/`](soccer/) | **축구 구단** — 잉글랜드/독일/한국 리그, 1·2부 승강제, 이적·임대·계약·재정, 어시스턴트 감독 | 플레이 가능 (v0.2) |
-| [`baseball/`](baseball/) | 야구단 — 구단을 키워 우승을 노리는 방치형 | 플레이 가능 (v0.1) |
+| [`baseball/`](baseball/) | 야구단 — MLB·KBO 구단을 맡아 로스터·계약·트레이드·FA·드래프트·재정을 운영하는 방치형 | 플레이 가능 (v2) |
 
 ## 가장 쉬운 실행 방법 (아이폰만으로)
 
@@ -21,7 +21,7 @@
 git clone https://github.com/7fsikMinQ/Game.git
 cd Game
 git checkout claude/serene-franklin-tpdu4g
-npm test        # 자동 테스트 183개 (몇 초). 윈도우는 test.bat
+npm test        # 자동 테스트 210개 (약 45초). 윈도우는 test.bat
 npm start       # 개발 서버. 윈도우는 start.bat
 ```
 
@@ -39,8 +39,8 @@ npm start       # 개발 서버. 윈도우는 start.bat
 | [docs/soccer/RESEARCH.md](docs/soccer/RESEARCH.md) | 조사 기록(약 48건) — 확인된 것/못 한 것, 출처 링크 |
 | [docs/soccer/ANALYSIS.md](docs/soccer/ANALYSIS.md) | 분석 10개 관점 |
 | [docs/soccer/REVIEWS.md](docs/soccer/REVIEWS.md) | 검토 14개 라운드와 찾은 결함, 남은 위험 |
-| [baseball/README.md](baseball/README.md) | 야구 게임 규칙, 개발자 메뉴 |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 야구 구조와 시간 모델(축구도 같은 틀) |
+| [baseball/README.md](baseball/README.md) | 야구 게임 규칙, 개발자 메뉴 · [규정 반영표](docs/baseball/RULES.md) · [설계](docs/baseball/DESIGN.md) · [실제 데이터](docs/baseball/REAL-DATA.md) · [조사](docs/baseball/RESEARCH.md) · [분석](docs/baseball/ANALYSIS.md) · [검토](docs/baseball/REVIEWS.md) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 공통 구조와 시간 모델(저장·방치형 계산 방식은 두 게임이 같은 틀) |
 | [docs/ADDING-A-GAME.md](docs/ADDING-A-GAME.md) | 새 게임 추가 방법 |
 
 ## 구조

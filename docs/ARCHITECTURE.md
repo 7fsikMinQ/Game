@@ -1,4 +1,6 @@
-# 구조와 설계 (야구 기준)
+# 구조와 설계 (공통)
+
+> 이 문서는 처음 만든 야구 v1을 기준으로 쓴 **공통 구조(저장, 시간 흐름, 테스트 방식)** 설명입니다. 현재 야구(v2: MLB·KBO)의 파일 구성과 규칙은 [baseball/DESIGN.md](baseball/DESIGN.md), 축구는 [soccer/DESIGN.md](soccer/DESIGN.md)를 보세요. 아래의 `league.js` 등 파일 이름은 v1 기준이라 v2와 다를 수 있습니다.
 
 > 축구 게임은 같은 틀(JSON 상태 하나, `nextGameAt` 따라잡기, 시드 난수, 두 칸 교대 저장, 서비스 워커)을 쓰고, 리그 구조·재정·이적·데이터 팩이 더 있습니다. 축구 설계: [soccer/DESIGN.md](soccer/DESIGN.md)
 

@@ -164,10 +164,13 @@ export function ageUp(p, rng) {
     if (x < 0.1) p.pa = clamp(p.pa + rng.int(5, 20), caOf(p), 200); // 대기만성
     else if (x < 0.2) p.pa = clamp(p.pa - rng.int(5, 20), caOf(p), 200); // 기대 이하
   }
-  if (p.age >= 31) {
-    const chance = Math.min(0.9, (p.age - 30) * 0.14);
-    for (const k of ['pac', 'agi', 'sta', 'jmp']) if (rng.chance(chance) && p.a[k] > 1) p.a[k]--;
-    if (p.age >= 33) for (const k of ['str', 'dri', 'fst']) if (rng.chance((p.age - 32) * 0.1) && p.a[k] > 1) p.a[k]--;
+  if (p.age >= 30) {
+    // 30세부터 피지컬이 떨어지고(속도·민첩·체력·점프), 32세부터 몸싸움·드리블·퍼스트 터치도 떨어진다. 나이가 많을수록 확률이 높고 34세부터는 한 번에 2씩 깎이기도 한다.
+    const chance = Math.min(0.95, (p.age - 29) * 0.2);
+    for (const k of ['pac', 'agi', 'sta', 'jmp']) {
+      if (rng.chance(chance) && p.a[k] > 1) p.a[k] -= p.age >= 34 && rng.chance(0.4) ? Math.min(2, p.a[k] - 1) : 1;
+    }
+    if (p.age >= 32) for (const k of ['str', 'dri', 'fst']) if (rng.chance(Math.min(0.8, (p.age - 31) * 0.14)) && p.a[k] > 1) p.a[k]--;
     touch(p);
   }
   p.s = null;

@@ -7,7 +7,7 @@ import { autoRoster, validateRoster, counts, buildLineup, battingOrder } from '.
 import { ovrOf, marketWage, ageUp, genPlayer, retireAge, valueOf } from './player.js';
 import { Lof, userTeam, withRng, ctxOf, addNews, payroll, capPayroll, annualRevenue, annualOpex, budgetOf, teamOvr, winPct, findPlayer, seasonLabel, seasonYear } from './core.js';
 import * as M from './market.js';
-import { clamp, r2 } from './util.js';
+import { clamp, r2, fmtMoney } from './util.js';
 
 export const VERSION = 2;
 export const INTERVAL_CHOICES = [5, 10, 20, 30];
@@ -306,7 +306,7 @@ function finishSeason(s, rng) {
   s.history.seasons.unshift(hist);
   s.history.seasons.length = Math.min(s.history.seasons.length, 20);
   addNews(s, 'season', `${seasonLabel(s)} 종료: ${champ.name} 우승`);
-  if (penalty) addNews(s, 'finance', `${penaltyName} ${penalty} 납부`);
+  if (penalty) addNews(s, 'finance', `${penaltyName} ${fmtMoney(s.country, penalty)} 납부`);
 
   // 계약 연차 정리 → 만료 선수
   const expiring = [];

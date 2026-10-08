@@ -320,3 +320,47 @@ test('자유계약으로 데려온 선수는 되팔아도 차익이 거의 없�
     }
   }
 });
+
+test('이적이 전력에 반영된다: 더 좋은 선수를 영입하면 그 선수가 선발에 들어가고 팀 전력과 예상 승리 확률이 오른다', () => {
+  const s = fresh('epl', 12, 8);
+  const me = G.userTeam(s);
+  const before = { ca: G.teamCA(me), win: G.preview(s) };
+  const cands = G.marketPlayers(s).filter(({ p }) => caOf(p) >= 128).sort((a, b) => caOf(b.p) - caOf(a.p));
+  assert.ok(cands.length > 0);
+  const { p } = cands[0];
+  const worstSame = me.players.filter((x) => x.pos === p.pos).sort((a, b) => caOf(a) - caOf(b))[0];
+  assert.ok(G.buyPlayer(s, p.id).ok);
+  const sq = G.squadFor(s, me);
+  assert.ok(sq.xi.some((x) => x.p === p) || caOf(p) <= caOf(worstSame), '영입한 선수가 선발에 들어가야 한다');
+  assert.ok(G.teamCA(me) >= before.ca, `전력 ${before.ca} → ${G.teamCA(me)}`);
+  const afterWin = G.preview(s);
+  if (before.win && afterWin) assert.ok(afterWin.w + afterWin.d * 0.5 >= before.win.w + before.win.d * 0.5 - 1e-9);
+});
+
+test('이적 상대 팀은 전력이 약해지고 비슷한 선수를 보충한다 (AI 구단의 선수단 유지)', () => {
+  const s = fresh('epl', 13, 8);
+  const { p, t } = G.marketPlayers(s).find(({ p }) => caOf(p) >= 125);
+  const n = t.players.length;
+  G.buyPlayer(s, p.id);
+  assert.equal(t.players.length, n);
+  assert.ok(t.players.some((x) => x.pos === p.pos && x !== p));
+});
+
+test('나이: 한 시즌 뒤 어린 선수는 평균적으로 늘고 33세 이상은 평균적으로 줄어든다 (3개 리그)', () => {
+  for (const c of ['epl', 'bl', 'kl']) {
+    const s = fresh(c, 31, 2);
+    const before = new Map(s.teams.flatMap((t) => t.players).map((p) => [p.id, { age: p.age, ca: caOf(p) }]));
+    G.dev.toOffseason(s, T0);
+    G.startNextSeason(s, T0, {});
+    const d = { young: [], old: [] };
+    for (const p of s.teams.flatMap((t) => t.players)) {
+      const b = before.get(p.id);
+      if (!b) continue;
+      assert.equal(p.age, b.age + 1);
+      if (b.age <= 23) d.young.push(caOf(p) - b.ca); else if (b.age >= 33) d.old.push(caOf(p) - b.ca);
+    }
+    const mean = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+    assert.ok(d.young.length > 5 && mean(d.young) > 2, `${c} 23세 이하 ${mean(d.young)}`);
+    assert.ok(d.old.length === 0 || mean(d.old) < -1.5, `${c} 33세 이상 ${mean(d.old)}`);
+  }
+});

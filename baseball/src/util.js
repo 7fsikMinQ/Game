@@ -29,3 +29,7 @@ export const esc = (s) =>
 // id 기반의 고정된 -1..1 값. 스카우팅 오차가 새로고침마다 흔들리지 않게 한다.
 export const fuzz = (id, salt = 0) => (((Math.imul(id + salt * 7919, 2654435761) >>> 0) % 2001) / 1000) - 1;
 export const f1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
+
+// 선수 사진 대신 쓰는 간단한 이니셜 아바타(이름의 첫 글자, id로 색 고정)
+export const initials = (name) => { const n = String(name).trim(); if (!n) return '?'; return /[가-힣]/.test(n[0]) ? n[0] : n.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase(); };
+export const avatar = (p) => `<span class="av a${Math.abs(p.id) % 6}" aria-hidden="true">${esc(initials(p.name))}</span>`;

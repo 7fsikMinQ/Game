@@ -87,7 +87,7 @@ small { display: block; color: var(--mute); font-size: 12px; font-weight: 400; m
 .stats4 > div { padding: 9px 4px 9px 12px; border-left: 1px solid var(--line); min-width: 0; }
 .stats4 > div:first-child { border-left: 0; }
 .stats4 span { display: block; font-size: 11px; color: var(--mute); }
-.stats4 b { display: block; font: 700 16px var(--mono); margin-top: 1px; white-space: nowrap; }
+.stats4 b { display: block; font: 700 clamp(13px, 4.1vw, 16px) var(--mono); margin-top: 1px; white-space: nowrap; }
 .stats4 small { font-size: 11px; }
 
 /* 카드 */
@@ -173,7 +173,7 @@ section.actions { margin-top: 18px; flex-direction: column; }
 .field > span, .lab { display: block; font-size: 12px; color: var(--mute); margin: 14px 0 6px; }
 
 /* 순위표 */
-.tablewrap { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.tablewrap { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .standings th { font-weight: 500; color: var(--mute); font-size: 11px; text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); }
 .standings td { text-align: right; padding: 9px 6px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -220,7 +220,7 @@ h3 + p { margin-bottom: 8px; }
 .top h1 { font-size: 15px; }
 #nav[hidden] { display: none; }
 .tab { position: relative; }
-.badge { position: absolute; top: 4px; right: calc(50% - 22px); min-width: 16px; height: 16px; border-radius: 8px; background: var(--clay); color: #fff; font: 700 10px/16px var(--sans); text-align: center; font-style: normal; padding: 0 4px; }
+.badge { position: absolute; top: 4px; right: calc(50% - 22px); min-width: 16px; height: 16px; border-radius: 8px; background: var(--clay); color: #fff; font: 700 11px/16px var(--sans); text-align: center; font-style: normal; padding: 0 4px; }
 .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .tag2 { font-size: 11px; color: var(--mute); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; }
 .rowbtn.big { padding: 14px; }
@@ -237,10 +237,10 @@ h3 + p { margin-bottom: 8px; }
 .ca i { font-style: normal; font-size: 11px; color: var(--mute); }
 .cond { width: 5px; height: 30px; background: var(--line); border-radius: 2px; display: flex; align-items: flex-end; flex: none; }
 .cond u { display: block; width: 100%; background: var(--win); border-radius: 2px; text-decoration: none; }
-.st { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
+.st { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 3px; margin-left: 4px; vertical-align: 1px; }
 .st.bad { background: var(--loss); color: #fff; } .st.warn { background: var(--amber); color: #fff; } .st.loan { background: var(--blue); color: #fff; }
 .st.loan:empty { display: none; }
-.nt { font: 700 10px var(--sans); padding: 2px 6px; border-radius: 3px; background: var(--line); color: var(--ink); flex: none; width: 36px; text-align: center; }
+.nt { font: 700 11px var(--sans); padding: 2px 4px; border-radius: 3px; background: var(--line); color: var(--ink); flex: none; width: 54px; text-align: center; white-space: nowrap; }
 .nt.offer, .nt.finance { background: var(--clay); color: #fff; } .nt.injury { background: var(--loss); color: #fff; }
 
 /* 전광판(경기) */
@@ -257,7 +257,7 @@ h3 + p { margin-bottom: 8px; }
 .mb { height: 4px; background: var(--line); display: flex; justify-content: flex-end; } .mb.r { justify-content: flex-start; }
 .mb i { display: block; height: 100%; background: var(--green); } .mb.r i { background: var(--clay); }
 @media (prefers-color-scheme: dark) { .mb i { background: var(--win); } }
-.ev .et { font: 700 10px var(--sans); width: 34px; flex: none; color: var(--mute); }
+.ev .et { font: 700 11px var(--sans); width: 36px; flex: none; color: var(--mute); }
 .ev.goal { color: var(--ink); } .ev.goal span:last-child { font-weight: 700; } .ev.goal b { color: var(--clay); }
 .ev.rc .et, .ev.inj .et { color: var(--loss); } .ev.yc .et { color: var(--amber); }
 .ev small { margin-top: 0; }
@@ -298,7 +298,7 @@ h3 + p { margin-bottom: 8px; }
 .slot b { display: grid; place-items: center; width: 34px; height: 34px; margin: 0 auto 2px; border-radius: 50%; background: var(--card); color: var(--ink); font: 700 13px var(--mono); border: 2px solid #ffffffaa; }
 .slot.bad b { background: var(--loss); color: #fff; }
 .slot span { display: block; font-size: 10.5px; line-height: 1.1; text-shadow: 0 1px 2px #0008; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.slot em { display: block; font: 600 9px var(--mono); font-style: normal; opacity: 0.7; }
+.slot em { display: block; font: 600 10.5px var(--mono); font-style: normal; opacity: 0.7; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; }
 .chip b { font-family: var(--mono); }
@@ -336,3 +336,11 @@ h3 + p { margin-bottom: 8px; }
 .list.tight .rowbtn { padding-top: 7px; padding-bottom: 7px; }
 .plays li.chg { color: var(--mute); font-style: italic; }
 li.mine { background: var(--sel); }
+
+/* 이니셜 아바타 */
+.av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 17px var(--sans); color: #fff; background: var(--mute); letter-spacing: -0.02em; }
+.av.a0 { background: #1f5a3a; } .av.a1 { background: #2a6f97; } .av.a2 { background: #8a5a1f; } .av.a3 { background: #7a3d5a; } .av.a4 { background: #4b5d8a; } .av.a5 { background: #5a6b2a; }
+@media (prefers-color-scheme: dark) { .av.a0 { background: #2a6b45; } .av.a1 { background: #2f6f99; } .av.a2 { background: #8d6428; } .av.a3 { background: #8a4a6c; } .av.a4 { background: #55689a; } .av.a5 { background: #657a35; } }
+.sheet-h h2 { overflow-wrap: anywhere; }
+
+@media (max-width: 360px) { .standings th, .standings td { padding-left: 3px; padding-right: 3px; } .standings .nm { font-size: 12px; } .standings td.nm i { margin-right: 4px; } .standings .rk { width: 20px; } }

@@ -14,7 +14,7 @@ const T = (name, short, color, div, mkt, str) => ({ name, short, color, div, mkt
 export const LEAGUES = {
   mlb: {
     id: 'mlb', name: 'MLB', long: '메이저리그 베이스볼', games: 162, active: 26, farmMax: 14, nH: 13, nSP: 5, minSal: 0.78,
-    wage: { base: 4.0, k: 0.0863, max: 62 }, rev0: 300, budgetShare: 0.55, faAt: 6, arbAt: 3, tradeDeadline: 0.62,
+    wage: { base: 4.0, k: 0.0863, max: 62 }, rev0: 300, budgetShare: 0.55, faAt: 6, arbAt: 3, tradeDeadline: 0.67,
     cbt: 244, cbtBands: [[20, [0.2, 0.3, 0.5]], [20, [0.32, 0.42, 0.62]], [20, [0.625, 0.75, 0.95]], [Infinity, [0.8, 0.9, 1.1]]], startCash: 0.1, draftRounds: 5, draftN: 150, foreign: false,
     divs: ['AL 동부', 'AL 중부', 'AL 서부', 'NL 동부', 'NL 중부', 'NL 서부'], leagues: ['AL', 'NL'],
     teams: [
@@ -34,7 +34,7 @@ export const LEAGUES = {
   },
   kbo: {
     id: 'kbo', name: 'KBO', long: 'KBO 리그', games: 144, active: 29, farmMax: 21, nH: 14, nSP: 5, minSal: 0.3,
-    wage: { base: 2.8, k: 0.085, max: 40 }, rev0: 700, budgetShare: 0.22, faAt: 8, arbAt: 3, tradeDeadline: 0.65,
+    wage: { base: 2.8, k: 0.085, max: 40 }, rev0: 700, budgetShare: 0.22, faAt: 8, arbAt: 3, tradeDeadline: 0.7,
     cap: 143.97, capFloor: 60.65, capRates: [0.3, 0.5, 1.0], startCash: 0.08, draftRounds: 11, draftN: 110, foreign: true,
     divs: ['KBO'], leagues: ['KBO'],
     teams: [

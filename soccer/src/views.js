@@ -1,5 +1,5 @@
 // 상태 -> HTML 문자열. DOM을 건드리지 않는 순수 함수라서 Node에서 테스트할 수 있다.
-import { esc, fmtMoney, fmtClock, f1 } from './util.js';
+import { esc, fmtMoney, fmtClock, f1, avatar } from './util.js';
 import { ATTRS, ATTR_LABEL, GROUP_LABEL, ROLES, ROLE_LABEL, FORMATIONS, MENTALITY, PRESSING, TRAIN_FOCUS, SQUAD_MAX } from './data.js';
 import { LEAGUES, COUNTRIES } from './league.js';
 import { caOf, caAt, valueOf, famOf, HYPE_LABEL, HYPE_STARS } from './player.js';
@@ -37,7 +37,7 @@ export function leagueSelectView() {
     return `<li><button class="rowbtn big" data-act="pick-league" data-id="${c}"><span class="grow"><b>${L.top}</b> <span class="mute">${L.name}</span><small>${d1.n}팀 · ${rounds1}라운드${split} · 승 3점 무 1점 패 0점<br>2부 ${d2.name} (${d2.n}팀) · 강등 ${L.rules.relegate}팀 · 승강제 포함</small></span><span class="chev">›</span></button></li>`;
   }).join('');
   return `<section class="head"><div><span class="eyebrow">새 게임</span><h2>리그를 고르세요</h2></div></section>
-  <p class="mute">기본은 <b>가상 구단·가상 선수</b>입니다. 실제 선수 이름·얼굴은 라이선스(초상권·상표) 문제가 있어 앱에 넣지 않았습니다. 규칙(팀 수, 경기 수, 승점, 승강제, 이적시장 기간, 임대 한도)은 2026년 기준 실제 리그를 따릅니다.</p>
+  <p class="mute">기본은 <b>가상 구단·가상 선수</b>입니다. 실제 선수 이름·얼굴은 라이선스(초상권·상표) 문제가 있어 앱에 넣지 않았습니다. 리그 구조(팀 수·경기 수·승점·승강제)는 공개된 2026년 자료를 따르고, 이적시장 기간·일부 임대 한도·재정 제재 수치는 <b>단순화한 게임 설정</b>입니다.</p>
   <ul class="list" style="margin-top:12px">${cards}</ul>
   <h3>내 데이터 가져오기 <small class="mute" style="display:inline">선택</small></h3>
   <div class="card"><div class="row between"><div><b>실제 구단·선수 데이터 팩</b><small>직접 구한 CSV/JSON으로 구단명·선수명·나이·유망주 등급을 반영합니다. 이 기기 안에서만 쓰입니다.</small></div><button class="btn small" data-act="import-open">가져오기</button></div></div>`;
@@ -206,7 +206,7 @@ export function playerSheet(s, pid, src = 'own') {
   else if (src === 'youth') act = `<button class="btn" data-act="youth-yes" data-pid="${p.id}">영입</button><button class="btn ghost" data-act="youth-no" data-pid="${p.id}">돌려보내기</button>`;
   else if (loanedOut) act = `<button class="btn" data-act="recall" data-pid="${p.id}">복귀 요청</button><button class="btn ghost" data-act="close">닫기</button>`;
   const x = p.s;
-  return `<header class="sheet-h"><div><h2>${esc(p.name)}</h2><span class="mute">${ROLE_LABEL[p.pos]} · ${p.age}세${t && !own ? ` · ${esc(t.name)}` : ''}${p.alt && p.alt.length ? ` · 가능: ${p.alt.join(', ')}` : ''}</span>${p.hype && p.age <= 23 ? `<div class="hypeline">${HYPE_STARS(p.hype)} ${HYPE_LABEL[p.hype]} <span class="mute">(시장·언론의 기대 등급)</span></div>` : ''}</div><div class="big"><b>${ca}</b><small>/ PA ${paTxt}</small></div></header>
+  return `<header class="sheet-h">${avatar(p)}<div class="grow"><h2>${esc(p.name)}</h2><span class="mute">${ROLE_LABEL[p.pos]} · ${p.age}세${t && !own ? ` · ${esc(t.name)}` : ''}${p.alt && p.alt.length ? ` · 가능: ${p.alt.join(', ')}` : ''}</span>${p.hype && p.age <= 23 ? `<div class="hypeline">${HYPE_STARS(p.hype)} ${HYPE_LABEL[p.hype]} <span class="mute">(시장·언론의 기대 등급)</span></div>` : ''}</div><div class="big"><b>${ca}</b><small>/ PA ${paTxt}</small></div></header>
   <div class="gauge"><i style="width:${(ca / 200) * 100}%"></i><u style="left:${(Math.min(200, est.mid ?? p.pa) / 200) * 100}%"></u></div>
   <div class="kvs"><div><span>컨디션</span><b>${Math.round(p.cond)}%</b></div><div><span>사기</span><b>${Math.round(p.mor ?? 70)}</b></div><div><span>상태</span><b>${p.out > 0 ? `부상 ${p.out}R` : p.suspend ? '출장정지' : '정상'}</b></div><div><span>시장 가치</span><b>${money(valueOf(p))}</b></div><div><span>연봉</span><b>${money(p.w)}</b></div><div><span>계약</span><b>${p.loan ? `임대(시즌 종료까지)` : p.ctr > 0 ? `${p.ctr}년 남음` : '무소속'}</b></div></div>
   ${x && x.app ? `<p class="meta">시즌 기록: ${x.app}경기 ${x.g}골 ${x.a}도움 · 평균 평점 ${f1(x.rt / x.app)}</p>` : ''}
@@ -236,7 +236,7 @@ export function tacticsView(s, ui) {
 export function slotPicker(s, slotIdx) {
   const me = G.userTeam(s), slot = formOf(me.form).slots[slotIdx];
   const cands = me.players.filter((p) => (p.pos === 'GK') === (slot.r === 'GK')).map((p) => ({ p, v: Math.round(caAt(p, slot.r) * famOf(p, slot.r)) })).sort((a, b) => b.v - a.v);
-  return `<header class="sheet-h"><div><h2>${ROLE_LABEL[slot.r]}</h2><span class="mute">이 자리에 뛸 선수를 고르세요</span></div></header>
+  return `<header class="sheet-h"><div><h2>${ROLE_LABEL[slot.r]}</h2><span class="mute">이 자리에서 뛸 선수를 고르세요</span></div></header>
   <ul class="list">${cands.map(({ p, v }) => `<li><button class="rowbtn" data-act="set-slot" data-i="${slotIdx}" data-pid="${p.id}"><span class="pos ${POSG[p.pos]}">${p.pos}</span><span class="grow">${esc(p.name)} ${statusTag(p)}<small>CA ${caOf(p)} · 컨디션 ${Math.round(p.cond)}%</small></span><span class="ca"><b>${v}</b></span></button></li>`).join('')}</ul>
   <div class="actions"><button class="btn ghost" data-act="close">닫기</button></div>`;
 }
@@ -297,7 +297,7 @@ export function clubView(s, ui) {
     <h3>선수단 비용 비율</h3>
     <div class="card"><div class="gauge scr"><i class="${scr.ratio > scr.red && scr.enforce ? 'over' : scr.ratio > scr.green ? 'warn' : ''}" style="width:${Math.min(100, (scr.ratio / 1.3) * 100)}%"></i><u style="left:${(scr.green / 1.3) * 100}%"></u>${scr.enforce ? `<u class="red" style="left:${(scr.red / 1.3) * 100}%"></u>` : ''}</div>
     <div class="kv"><span>(연봉 + 이적료 상각) / 수입</span><b>${Math.round(scr.ratio * 100)}%</b></div>
-    <p class="mute small">${scr.enforce ? `규정: ${Math.round(scr.green * 100)}% 초과 시 부담금, ${Math.round(scr.red * 100)}% 초과 시 승점 삭감(시즌 80% 시점에 점검). 2026/27부터 시행되는 잉글랜드 선수단 비용 비율 규정을 단순화한 것입니다.` : `권장 한도 ${Math.round(scr.green * 100)}% (이 리그는 게임에서 경고만 합니다).`}</p></div>
+    <p class="mute small">${scr.enforce ? `한도 ${Math.round(scr.green * 100)}%는 2026/27 잉글랜드 선수단 비용 비율 규정을 따릅니다. 초과 시 부담금, 크게 초과(${Math.round(scr.red * 100)}%) 시 승점 삭감(시즌 80% 시점 점검)의 세부 수치는 <b>게임 설정</b>입니다.` : `권장 한도 ${Math.round(scr.green * 100)}% (이 리그는 게임에서 경고만 합니다).`}</p></div>
     <h3>시설 투자</h3><ul class="list fac">${Object.keys(G.FAC_INFO).map((k) => { const lv = s.fac[k], max = lv >= G.FAC_MAX, cost = G.facCost(s, k, lv), can = !max && s.money >= cost; return `<li><div class="grow"><b>${G.FAC_INFO[k].name}</b> <span class="mute">Lv ${lv}</span><small>${G.FAC_INFO[k].desc}</small></div><button class="btn small${can ? '' : ' off'}" data-act="fac" data-key="${k}" ${max ? 'disabled' : ''}>${max ? '최대' : money(cost)}</button></li>`; }).join('')}</ul>`;
   } else if (seg === 'market') {
     const w = G.windowInfo(s), r = G.rulesOf(s), lin = G.loansIn(s), lout = G.loansOut(s);

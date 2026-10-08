@@ -3,7 +3,7 @@ import { Lof, userTeam, addNews, payroll, budgetOf, ctxOf, teamOvr } from './cor
 import { ovrOf, valueOf, marketWage, genPlayer, rollHype } from './player.js';
 import { autoRoster } from './roster.js';
 import { POSITIONS } from './data.js';
-import { clamp, r2, fuzz } from './util.js';
+import { clamp, r2, fuzz, fmtMoney } from './util.js';
 
 export const LOCK_DAYS = 25;
 export const ASIA_CAP = 3.0; // 억 원 (약 20만 달러)
@@ -46,7 +46,7 @@ export function release(s, pid) {
   t.players.splice(t.players.indexOf(p), 1);
   p.act = 0; p.yrs = 0; p.lock = 0;
   if (ovrOf(p) >= 38) s.market.free.push(p);
-  addNews(s, 'contract', `${p.name} 방출 (위약금 ${cost})`);
+  addNews(s, 'contract', `${p.name} 방출 (위약금 ${fmtMoney(s.country, cost)})`);
   fixUser(s);
   return { ok: true, cost };
 }
@@ -92,7 +92,7 @@ export function signFA(s, pid, yrs, src = 'free') {
   pool.splice(pool.indexOf(p), 1);
   p.sal = sal; p.yrs = yrs; p.act = 0; p.lock = dayOf(s) + LOCK_DAYS;
   t.players.push(p);
-  addNews(s, 'contract', `${p.name} 영입 (${yrs}년, 연봉 ${sal})`);
+  addNews(s, 'contract', `${p.name} 영입 (${yrs}년, 연봉 ${fmtMoney(s.country, sal)})`);
   fixUser(s);
   return { ok: true, sal };
 }

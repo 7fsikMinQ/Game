@@ -220,3 +220,120 @@ test('스카우트·유망주: 어린 선수일수록 잠재력 격차가 크고
   assert.ok(gap((p) => p.age <= 22) > gap((p) => p.age >= 28) + 3);
   assert.ok(gap((p) => p.age >= 28) < 4);
 });
+
+// ───────── 이적이 실제로 팀 전력에 반영되는가 / AI 판단 / 나이와 노화 / 저장 ─────────
+const teamPower = (s, t) => G.teamOvr(t).total;
+
+test('트레이드가 전력에 반영된다: 2군 유망주를 주고 즉시전력을 받으면 내 팀 전력이 오르고 상대 팀은 내려가며, 받은 선수가 1군/라인업에 들어간다', () => {
+  for (const seed of [3, 4, 5, 6, 7, 8, 9, 10]) {
+    const s = fresh('mlb', seed, 3);
+    const mine = me(s);
+    const worst = (role) => mine.players.filter((p) => p.act && p.role === role).sort((a, b) => G.ovrOf(a) - G.ovrOf(b))[0];
+    const farm = mine.players.filter((p) => !p.act).sort((a, b) => G.tradeValue(LEAGUES.mlb, b) - G.tradeValue(LEAGUES.mlb, a));
+    for (const ai of s.teams.filter((t) => t.id !== s.userId)) {
+      for (const v of ai.players.filter((p) => p.act).sort((a, b) => G.ovrOf(b) - G.ovrOf(a))) {
+        if (v.fx) continue;
+        const w = worst(v.role);
+        if (G.ovrOf(v) < G.ovrOf(w) + 4) continue;
+        for (const g of farm.slice(0, 6)) {
+          if (g.role !== v.role || !G.tradeCheck(s, ai.id, [g.id], [v.id]).ok) continue;
+          const before = [teamPower(s, mine), teamPower(s, ai)];
+          assert.ok(G.trade(s, ai.id, [g.id], [v.id]).ok);
+          const after = [teamPower(s, mine), teamPower(s, ai)];
+          assert.ok(mine.players.includes(v) && ai.players.includes(g), '선수가 서로 옮겨졌다');
+          assert.ok(v.act === 1, '받은 선수가 어시스턴트에 의해 1군에 올라갔다');
+          assert.ok(after[0] > before[0], `내 전력 ${before[0]} → ${after[0]}`);
+          assert.ok(after[1] <= before[1] + 0.01, `상대 전력 ${before[1]} → ${after[1]}`);
+          if (v.role === 'H') assert.ok(G.lineupOf(s).some((x) => x.p === v), '받은 타자가 선발 라인업에 없음');
+          return;
+        }
+      }
+    }
+  }
+  assert.fail('시험할 만한 트레이드가 성사되지 않음');
+});
+
+test('AI 판단: 가치가 맞지 않는 거래는 거절하고, 구단은 유망주·젊은 선수를 더 높게 평가하며, 같은 능력이면 계약이 싼 선수를 더 높게 본다', () => {
+  const L = LEAGUES.mlb;
+  const base = { role: 'H', pos: 'CF', con: 60, pow: 60, eye: 60, spd: 60, fld: 60, age: 27, pot: 62, hype: 0, sal: 8, yrs: 3, svc: 4, id: 1 };
+  const old = { ...base, age: 36, id: 2 };
+  assert.ok(G.tradeValue(L, base) > G.tradeValue(L, old) * 1.5, '나이가 많을수록 가치가 크게 낮아져야 한다');
+  const prospect = { ...base, age: 20, pot: 82, hype: 3, con: 40, pow: 40, eye: 40, spd: 40, fld: 40, sal: L.minSal, svc: 0, id: 3 };
+  const filler = { ...base, age: 30, pot: 60, con: 52, pow: 52, eye: 52, spd: 52, fld: 52, id: 4 };
+  assert.ok(G.tradeValue(L, prospect) > G.tradeValue(L, filler), '잠재력이 큰 유망주는 현재 능력이 낮아도 높게 평가');
+  assert.ok(G.tradeValue(L, { ...base, sal: 3, id: 5 }) > G.tradeValue(L, { ...base, sal: 30, id: 6 }), '같은 능력이면 연봉이 싼 쪽이 가치가 높다');
+  const s = fresh('mlb', 3);
+  const star = s.teams[10].players.slice().sort((a, b) => G.ovrOf(b) - G.ovrOf(a))[0];
+  const junk = me(s).players.slice().sort((a, b) => G.ovrOf(a) - G.ovrOf(b)).slice(0, 3);
+  for (const j of junk) assert.equal(G.tradeCheck(s, 10, [j.id], [star.id]).err, 'value');
+});
+
+test('FA 영입이 전력에 반영된다: 약한 자리에 더 좋은 FA를 영입해 1군에 올리면 팀 전력이 오른다', () => {
+  const s = fresh('mlb', 9, 3);
+  s.money = 1e5;
+  const t = me(s);
+  s.settings.autoRoster = false;
+  const weakest = t.players.filter((p) => p.act && p.pos === 'SP').sort((a, b) => G.ovrOf(a) - G.ovrOf(b))[0];
+  const fa = s.market.free.filter((p) => p.pos === 'SP' && G.ovrOf(p) > G.ovrOf(weakest)).sort((a, b) => G.ovrOf(b) - G.ovrOf(a))[0];
+  if (!fa) return;
+  const before = teamPower(s, t);
+  G.release(s, t.players.find((p) => !p.act && p.role === 'H' && p !== weakest).id);
+  assert.ok(G.signFA(s, fa.id, 1).ok);
+  G.setActive(s, weakest.id, false);
+  G.setActive(s, fa.id, true);
+  assert.ok(teamPower(s, t) > before, `${before} → ${teamPower(s, t)}`);
+});
+
+test('나이: 한 시즌이 지나면 모든 선수가 정확히 1살 먹고, 젊은 선수는 평균적으로 오르고 33세 이상은 평균적으로 떨어진다 (MLB·KBO)', () => {
+  for (const c of ['mlb', 'kbo']) {
+    const s = fresh(c, 21, 2);
+    G.dev.toOffseason(s);
+    const before = new Map(s.teams.flatMap((t) => t.players).map((p) => [p.id, { age: p.age, ovr: G.ovrOf(p) }]));
+    G.startNextSeason(s, T0, { auto: false });
+    const groups = { young: [], old: [], mid: [] };
+    let counted = 0;
+    for (const p of s.teams.flatMap((t) => t.players)) {
+      const b = before.get(p.id);
+      if (!b) continue;
+      counted++;
+      assert.equal(p.age, b.age + 1, `${p.name} 나이`);
+      const d = G.ovrOf(p) - b.ovr;
+      (b.age <= 23 ? groups.young : b.age >= 33 ? groups.old : groups.mid).push(d);
+    }
+    assert.ok(counted > 300);
+    const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    assert.ok(mean(groups.young) > 1.5, `${c} 23세 이하 평균 변화 ${mean(groups.young)}`);
+    assert.ok(mean(groups.old) < -1.5, `${c} 33세 이상 평균 변화 ${mean(groups.old)}`);
+    assert.ok(mean(groups.young) > mean(groups.mid) && mean(groups.mid) > mean(groups.old));
+  }
+});
+
+test('노화는 해마다 이어진다: 같은 선수 집단이 5년 뒤 35세 이후에 확연히 약해지고 일부는 은퇴한다', () => {
+  const s = fresh('mlb', 33, 2);
+  const cohort = s.teams.flatMap((t) => t.players).filter((p) => p.age >= 30 && p.age <= 32).map((p) => ({ id: p.id, ovr: G.ovrOf(p) }));
+  for (let y = 0; y < 5; y++) { G.dev.toOffseason(s); G.startNextSeason(s, T0, { auto: true }); }
+  const now = new Map(s.teams.flatMap((t) => t.players).map((p) => [p.id, p]));
+  const alive = cohort.filter((c) => now.has(c.id));
+  assert.ok(alive.length > 20 && alive.length < cohort.length, `생존 ${alive.length}/${cohort.length}`);
+  const drop = alive.reduce((a, c) => a + (G.ovrOf(now.get(c.id)) - c.ovr), 0) / alive.length;
+  assert.ok(drop < -5, `5년 평균 변화 ${drop}`);
+});
+
+test('이적·계약 후 저장하고 불러와도 그대로 유지된다 (로스터, 연봉, 거래 제한, 내 팀 이름)', async () => {
+  const { pack, unpack } = await import('../src/storage.js');
+  const s = fresh('kbo', 5, 4);
+  const t = me(s);
+  G.release(s, t.players.find((p) => !p.act && !p.fx).id);
+  const fa = s.market.free.slice().sort((a, b) => G.ovrOf(b) - G.ovrOf(a))[0];
+  assert.ok(G.signFA(s, fa.id, 2).ok);
+  const ai = s.teams[2];
+  const give = t.players.filter((p) => G.lockLeft(s, p) === 0 && !p.fx).sort((a, b) => G.ovrOf(b) - G.ovrOf(a))[0];
+  const get = ai.players.filter((p) => !p.fx && p.role === give.role).sort((a, b) => G.ovrOf(a) - G.ovrOf(b))[0];
+  G.trade(s, ai.id, [give.id], [get.id]);
+  G.renameTeam(s, '테스트 구단');
+  const r = unpack(pack(s, 7)).state;
+  assert.deepEqual(r, JSON.parse(JSON.stringify(s)));
+  const t2 = r.teams[r.userId];
+  assert.ok(t2.players.some((p) => p.id === fa.id && p.sal === fa.sal && p.lock === fa.lock));
+  assert.equal(t2.name, '테스트 구단');
+});

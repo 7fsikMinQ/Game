@@ -1,5 +1,5 @@
 // 상태 -> HTML 문자열. DOM을 건드리지 않는 순수 함수라서 Node에서 테스트할 수 있다.
-import { esc, fmtMoney, fmtAvg, fmtIP, fmtEra, fmtClock, f1 } from './util.js';
+import { esc, fmtMoney, fmtAvg, fmtIP, fmtEra, fmtClock, f1, avatar } from './util.js';
 import { LEAGUES, COUNTRIES, POS_LABEL, STAT_LABEL, HIT_STATS, PIT_STATS } from './data.js';
 import { HYPE_LABEL, HYPE_STARS, marketWage } from './player.js';
 import { ROUND_NAME, seriesOver } from './league.js';
@@ -236,7 +236,7 @@ export function playerSheet(s, pid, src = 'own') {
     act = `${turn ? `<button class="btn" data-act="draft-pick" data-pid="${p.id}">지명하기</button>` : '<p class="mute small">내 지명 차례에 지명할 수 있습니다.</p>'}<button class="btn ghost" data-act="close">닫기</button>`;
   } else if (t && t.id !== s.userId) act = `<button class="btn" data-act="trade-with-ai" data-tid="${t.id}" data-pid="${p.id}">이 선수 트레이드 알아보기</button><button class="btn ghost" data-act="close">닫기</button>`;
   const x = p.s;
-  return `<header class="sheet-h"><div><h2>${esc(p.name)}</h2><span class="mute">${POS_LABEL[p.pos]} · ${p.age}세${t && !own ? ` · ${esc(t.name)}` : ''}${p.fx ? ` · ${p.fx === 2 ? '아시아쿼터' : '외국인'}` : ''}</span>${p.hype && p.age <= 23 ? `<div class="hypeline">${HYPE_STARS(p.hype)} ${HYPE_LABEL[p.hype]} <span class="mute">(시장·언론의 기대 등급)</span></div>` : ''}</div><div class="big"><b>${ovr}</b><small>/ 잠재 ${est.err ? `${est.lo}~${est.hi}` : est.mid}</small></div></header>
+  return `<header class="sheet-h">${avatar(p)}<div class="grow"><h2>${esc(p.name)}</h2><span class="mute">${POS_LABEL[p.pos]} · ${p.age}세${t && !own ? ` · ${esc(t.name)}` : ''}${p.fx ? ` · ${p.fx === 2 ? '아시아쿼터' : '외국인'}` : ''}</span>${p.hype && p.age <= 23 ? `<div class="hypeline">${HYPE_STARS(p.hype)} ${HYPE_LABEL[p.hype]} <span class="mute">(시장·언론의 기대 등급)</span></div>` : ''}</div><div class="big"><b>${ovr}</b><small>/ 잠재 ${est.err ? `${est.lo}~${est.hi}` : est.mid}</small></div></header>
   <div class="gauge"><i style="width:${ovr}%"></i><u style="left:${est.mid}%"></u></div>
   <div class="kvs"><div><span>상태</span><b>${p.inj > 0 ? `부상 ${Math.ceil(p.inj)}일` : '정상'}</b></div><div><span>연봉</span><b>${m(s, p.sal)}</b></div><div><span>계약</span><b>${p.yrs > 0 ? `${p.yrs}년` : '만료'}</b></div><div><span>${L.id === 'mlb' ? '서비스' : '등록'}</span><b>${p.svc}년${p.svc >= L.faAt ? ' (FA)' : ''}</b></div><div><span>시장 연봉</span><b>${m(s, marketWage(L, ovr, p.age))}</b></div><div><span>트레이드 가치</span><b>${Math.round(G.tradeValue(L, p))}</b></div></div>
   ${x && (x.pa || x.outs) ? `<p class="meta">시즌 기록: ${statLine(p)}</p>` : ''}${lock ? `<p class="mute small">거래 제한: ${lock}일 뒤 가능</p>` : ''}
@@ -357,7 +357,7 @@ export function clubView(s, ui) {
     body = `<section class="card"><div class="kv"><span>자금</span><b>${m(s, s.money)}</b></div><div class="kv"><span>연 수입(추정)</span><b>${m(s, rev)}</b></div><div class="kv"><span>연봉 총액</span><b>${m(s, pay)}</b></div><div class="kv"><span>예산 기준</span><b>${m(s, bud)}</b></div>
     <div class="kv"><span>${L.id === 'mlb' ? '사치세(CBT) 기준' : '경쟁균형세 기준(상위 40명, 외국인·신인 제외)'}</span><b class="${used > lim ? 'neg-t' : ''}">${m(s, used)} / ${m(s, lim)}</b></div>
     <div class="gauge"><i style="width:${Math.min(100, (used / lim) * 100)}%"></i></div>
-    ${used > lim ? `<p class="mute small">초과 시 시즌 종료 때 ${L.id === 'mlb' ? `초과분의 20~80%(구간별, 연속 초과 시 최대 110%)를 세금으로` : `초과분의 ${L.capRates.map((x) => x * 100).join('/')}%(연속 초과 횟수별)를 야구발전기금으로`} 내야 합니다.</p>` : ''}
+    ${used > lim ? `<p class="mute small">초과 시 시즌 종료 때 ${L.id === 'mlb' ? '초과분에 구간별 세율(20~80%, 연속 초과 시 최대 110%)을 적용한 사치세를' : '초과분의 일부를 야구발전기금으로(비율은 게임 설정)'} 내야 합니다.</p>` : ''}
     <div class="kv"><span>인기(팬)</span><b>${Math.round(me.fan)}</b></div><div class="kv"><span>누적 순이익</span><b>${sgn(s, s.totals.earned)}</b></div></section>
     ${s.history.seasons.length ? `<h3>시즌별</h3><ul class="list">${s.history.seasons.slice(0, 5).map((h) => `<li><span class="grow">${h.year} · ${h.w}승 ${h.l}패<small>${h.po} · 연봉 ${m(s, h.payroll)}${h.penalty ? ` · ${esc(h.penaltyName)} ${m(s, h.penalty)}` : ''}</small></span></li>`).join('')}</ul>` : ''}`;
   } else if (seg === 'fac') {
