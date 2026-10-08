@@ -97,7 +97,7 @@ export function homeView(s, ui, now) {
   const left = Math.max(0, (s.nextGameAt || now) - now);
   const prog = Math.min(100, Math.max(0, (1 - left / iv) * 100));
   const live = ui.live, e = s.latest;
-  const hide = !!live;
+  const hide = false;
   const opp = nx ? s.teams[nx.h === s.userId ? nx.a : nx.h] : null;
   const phaseLabel = s.phase === 'regular' ? `정규시즌 ${me.w + me.l + (me.d || 0)}/${L.games}` : s.phase === 'playoffs' ? ROUND_NAME[s.country][s.playoff.round] : '';
   const report = ui.report ? `<section class="card report"><div><b>자리를 비운 동안</b><p>${ui.report.games}경기 · ${ui.report.w}승 ${ui.report.d ? ui.report.d + '무 ' : ''}${ui.report.l}패${ui.report.seasons ? ` · ${ui.report.seasons}시즌 자동 진행` : ''} · 자금 ${sgn(s, ui.report.money)}${ui.report.skipped ? '<br><span class="mute">밀린 경기가 많아 일부만 반영되었습니다.</span>' : ''}</p></div><button class="btn small ghost" data-act="dismiss-report">확인</button></section>` : '';
@@ -110,8 +110,8 @@ export function homeView(s, ui, now) {
   const osp = opp && s.phase === 'regular' ? G.nextStarterOf(s, opp.id) : null;
   let board = '';
   if (e) board = live ? boardFromPlays(s, e, live.shown) : boardFromEntry(s, e);
-  const recent = s.history.games.slice(live ? 1 : 0, live ? 7 : 6);
-  const shownStreak = live ? s.streak.slice(0, -1) : s.streak;
+  const recent = s.history.games.slice(0, 6);
+  const shownStreak = s.streak;
   const po = s.phase === 'playoffs' ? s.playoff : null;
   const sr = nx && nx.sr;
   return `${nudge}${report}${offers}${debt}${warn}
@@ -405,3 +405,6 @@ export function devSheet(s) {
   <h3>자금</h3><div class="seg">${[['+', 100], ['++', 1000]].map(([l, v]) => `<button data-act="dev-money" data-v="${v}">${l}${v}</button>`).join('')}</div>
   <div class="actions col"><button class="btn" data-act="dev-boost">내 팀 능력치 +5</button><button class="btn" data-act="dev-10">10경기 즉시</button><button class="btn" data-act="dev-end">시즌 끝까지</button><button class="btn ghost" data-act="close">닫기</button></div>`;
 }
+
+// 중계 중에는 경기 전 스냅샷(ui.before)을 보여 주어 승패가 미리 드러나지 않게 한다
+export function displayState(s, ui) { return ui.live && ui.before ? { ...ui.before, latest: s.latest } : s; }

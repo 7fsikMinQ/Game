@@ -78,15 +78,24 @@ test('화면 문자열에 이름이 이스케이프된다 (구단·선수 이름
   assert.equal(esc('<a>'), '&lt;a&gt;');
 });
 
-test('중계 중에는 결과가 스포일러되지 않는다 (순위·최근 성적을 직전 값으로)', () => {
+test('중계 중에는 결과가 스포일러되지 않는다 (경기 전 스냅샷 표시, 끝나면 반영)', () => {
   const s = fresh('mlb', 8);
+  G.playNow(s, 3, T0);
+  const before = JSON.parse(JSON.stringify(s));
   G.playNow(s, 1, T0);
-  const live = { shown: 1 };
-  const html = V.homeView(s, ui({ live }), T0);
+  const u = ui({ live: { shown: 1 }, before });
+  const ds = V.displayState(s, u);
+  const html = V.homeView(ds, u, T0);
+  const me0 = before.teams[before.userId], me1 = s.teams[s.userId];
   assert.ok(html.includes('중계 중'));
-  assert.ok(!html.includes('경기 기록'.repeat(2)));
+  assert.ok(html.includes(`${me0.w}-${me0.l}`));
+  assert.notEqual(`${me0.w}-${me0.l}`, `${me1.w}-${me1.l}`);
+  assert.ok(!html.includes(`<b>${me1.w}-${me1.l}</b>`));
+  assert.equal(ds.money, before.money);
+  assert.equal(ds.history.games.length, before.history.games.length);
   const board = V.boardFromPlays(s, s.latest, 0);
   assert.equal(board.away.length + board.home.length, 0);
+  assert.equal(V.displayState(s, ui({ live: null, before })), s);
 });
 
 test('KBO 순위표는 5위까지 컷 라인, MLB는 6개 지구 이름이 모두 나온다', () => {

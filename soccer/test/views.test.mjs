@@ -75,14 +75,18 @@ test('홈: 건너뛰기 버튼과 다음 경기/예상 승률/경기 간격 안�
   assert.ok(h.includes('data-act="play" data-n="1"') && h.includes('data-n="5"') && h.includes('data-n="9999"'));
 });
 
-test('중계 중에는 이번 경기 결과(순위/승점)가 가려진다', () => {
+test('중계 중에는 이번 경기 결과(승점·득실·자금)가 경기 전 값으로 보인다', () => {
   const s = G.newGame(2, T0, 'bl'); G.chooseClub(s, 2, T0);
+  G.playNow(s, 2, T0);
+  const before = JSON.parse(JSON.stringify(s));
   G.playNow(s, 1, T0);
-  const live = V.homeView(s, { ...ui(s), live: { min: 20 } }, T0);
+  const u = { ...ui(s), live: { min: 20 }, before };
+  const live = V.homeView(V.displayState(s, u), u, T0);
+  const pts = (x) => G.standings(x).find((r) => r.id === x.userId).pts;
   assert.ok(live.includes('중계 중'));
-  assert.ok(live.includes('<b>-</b>위'));
+  assert.ok(live.includes(`<span>승점</span><b>${pts(before)}</b>`));
   const done = V.homeView(s, ui(s), T0);
-  assert.ok(!done.includes('<b>-</b>위'));
+  assert.ok(done.includes(`<span>승점</span><b>${pts(s)}</b>`));
 });
 
 test('이적 탭: 열림/닫힘 안내, 임대 한도(EPL 2명 공식), 제안 수락/거절 버튼', () => {
@@ -148,4 +152,13 @@ test('서식/보안 함수', () => {
   assert.equal(fmtClock(61_000), '01:01');
   assert.equal(esc('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
   const f = fuzz(123); assert.ok(f >= -1 && f <= 1); assert.equal(fuzz(123), f);
+});
+
+test('중계 중에는 경기 전 스냅샷을 보여 준다', async () => {
+  const V2 = await import('../src/views.js');
+  const s = { money: 5, latest: { x: 1 } };
+  const before = { money: 1, latest: { x: 0 } };
+  assert.equal(V2.displayState(s, { live: { min: 3 }, before }).money, 1);
+  assert.equal(V2.displayState(s, { live: { min: 3 }, before }).latest.x, 1);
+  assert.equal(V2.displayState(s, { live: null, before }), s);
 });

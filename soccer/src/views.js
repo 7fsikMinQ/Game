@@ -90,13 +90,13 @@ export function homeView(s, ui, now) {
   const prog = Math.min(100, Math.max(0, (1 - left / iv) * 100));
   const pv = fx ? G.preview(s) : null;
   const opp = fx ? s.teams[fx.h === s.userId ? fx.a : fx.h] : null;
-  const e = s.latest, live = ui.live, hide = !!live;
+  const e = s.latest, live = ui.live, hide = false;
   const out = me.players.filter((p) => p.out > 0).length, sus = me.players.filter((p) => p.suspend).length;
   const w = G.windowInfo(s);
   const report = ui.report ? `<section class="card report"><div><b>자리를 비운 동안</b><p>${ui.report.games}라운드${ui.report.seasons ? ` · ${ui.report.seasons}시즌 자동 진행` : ''} · ${ui.report.w}승 ${ui.report.d}무 ${ui.report.l}패 · 자금 ${ui.report.money >= 0 ? '+' : ''}${money(ui.report.money)}${ui.report.skipped ? '<br><span class="mute">밀린 경기가 많아 일부만 반영되었습니다.</span>' : ''}</p></div><button class="btn small ghost" data-act="dismiss-report">확인</button></section>` : '';
   const offers = s.offers.length ? `<section class="card alert"><div class="row between"><div><b>이적 제안 ${s.offers.length}건</b><small>구단 탭 → 이적에서 확인하세요</small></div><button class="btn small" data-act="goto-offers">보기</button></div></section>` : '';
-  const recent = s.history.games.slice(live ? 1 : 0, live ? 6 : 5);
-  const streak = live ? s.streak.slice(0, -1) : s.streak;
+  const recent = s.history.games.slice(0, 5);
+  const streak = s.streak;
   const odds = pv ? { w: fx.h === s.userId ? pv.w : pv.l, d: pv.d, l: fx.h === s.userId ? pv.l : pv.w } : null;
   const roundsLeft = G.roundsLeft(s);
   const nudge = ui.backupNudge ? `<section class="card alert"><div class="row between"><div><b>백업을 권장합니다</b><small>iOS가 웹 데이터를 지울 수 있어서 가끔 백업해 두세요</small></div><div class="oact"><button class="btn small" data-act="backup">백업</button><button class="btn small ghost" data-act="dismiss-nudge">나중에</button></div></div></section>` : '';
@@ -360,3 +360,6 @@ export function devSheet(s) {
   <label class="lab">진행</label><div class="actions wrap">${b('시즌 끝까지', 'dev-end')}</div>
   <div class="actions"><button class="btn" data-act="close">닫기</button></div>`;
 }
+
+// 중계 중에는 경기 전 스냅샷(ui.before)을 보여 주어 승패가 미리 드러나지 않게 한다
+export function displayState(s, ui) { return ui.live && ui.before ? { ...ui.before, latest: s.latest } : s; }

@@ -1,7 +1,7 @@
 import * as G from './game.js';
 import { createStore, exportText, importText } from './storage.js';
 import { parsePackText, applyPack } from './pack.js';
-import { importSheet, csvTemplate, navHTML, homeView, squadView, tacticsView, leagueView, clubView, playerSheet, slotPicker, backupSheet, devSheet, leagueSelectView, clubSelectView, eventLine, errText, badgeCount } from './views.js';
+import { displayState, importSheet, csvTemplate, navHTML, homeView, squadView, tacticsView, leagueView, clubView, playerSheet, slotPicker, backupSheet, devSheet, leagueSelectView, clubSelectView, eventLine, errText, badgeCount } from './views.js';
 import { fmtClock, fmtMoney } from './util.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -34,7 +34,7 @@ function render() {
   ui.backupNudge = !ui.nudgeDismissed && s.totals.games >= 10 && (!s.lastBackupAt || Date.now() - s.lastBackupAt > 7 * 86400000);
   if (ui.tab === 'tactics') { const t = G.userTeam(s); ui.squadCache = G.squadFor(s, t); }
   const V = { home: homeView, squad: squadView, tactics: tacticsView, league: leagueView, club: clubView };
-  view.innerHTML = V[ui.tab](s, ui, Date.now());
+  view.innerHTML = V[ui.tab](shownState(), ui, Date.now());
   $('#nav').innerHTML = navHTML(ui.tab, badgeCount(s));
   $('#season').textContent = `${G.seasonLabel(s)} · ${G.divCfg(s, G.userTeam(s).div).name}`;
 }
@@ -47,9 +47,13 @@ let toastTimer;
 function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 2000); }
 
 // ───────── 중계 연출 ─────────
-function stopLive() { if (ui.live) clearInterval(ui.live.timer); ui.live = null; }
-function startLive() {
+// 중계 중에는 경기 전 상태(ui.before)를 보여 주고, 끝난 뒤에야 결과를 반영한다
+const snap = () => JSON.parse(JSON.stringify(s));
+const shownState = () => displayState(s, ui);
+function stopLive() { if (ui.live) clearInterval(ui.live.timer); ui.live = null; ui.before = null; }
+function startLive(before) {
   stopLive();
+  ui.before = before || null;
   if (!s.latest || !s.latest.events) return;
   ui.live = { min: 0, timer: setInterval(stepLive, 85) };
 }
@@ -76,10 +80,11 @@ function tick() {
   if (!s || s.phase === 'setup') return;
   const now = Date.now();
   const due = s.nextGameAt ? now - s.nextGameAt : -1;
+  const before = due >= 0 && document.visibilityState === 'visible' ? snap() : null;
   const rep = advance(now);
   if (rep.games > 0 || rep.phaseChanged || rep.seasons) {
     persist();
-    if (rep.games === 1 && !rep.seasons && due < 5000 && document.visibilityState === 'visible') startLive();
+    if (rep.games === 1 && !rep.seasons && due < 5000 && document.visibilityState === 'visible') startLive(before);
     else if (rep.games > 0) { stopLive(); mergeReport(rep); }
     if (!ui.sheet) render();
     return;
@@ -166,10 +171,11 @@ function act(name, d) {
     // 진행 / 건너뛰기
     case 'play': {
       stopLive();
+      const before = +d.n === 1 ? snap() : null;
       const rep = G.playNow(s, +d.n, now);
       if (!rep.games) { toast('진행할 경기가 없습니다. 오프시즌에서 다음 시즌을 시작하세요'); render(); break; }
       persist();
-      if (+d.n === 1 && rep.games === 1) { ui.report = null; startLive(); }
+      if (+d.n === 1 && rep.games === 1) { ui.report = null; startLive(before); }
       else { ui.report = null; mergeReport(rep); toast(`${rep.games}라운드 진행`); }
       render(); window.scrollTo(0, 0);
       break;
